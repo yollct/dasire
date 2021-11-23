@@ -1,0 +1,280 @@
+# #!/usr/bin/env Rscript
+library(optparse)
+
+option_list = list(
+   make_option(c("-b", "--bamdir"), type="character", default="", 
+               help="path to bam files folder include the '/' in the end", metavar="character"),
+   make_option(c("-l", "--layout"), type="character", default="", 
+               help="layout of the experiment 'single' or 'paired'", metavar="character"),
+    make_option(c("-gtf", "--gtffile"), type="character", default="", 
+               help="annotation file in gtf format, example gencode.v36.annotation.gtf", metavar="character"),
+    make_option(c("-o", "--outdir"), type="character", default="", 
+               help="path to the directory used as output, it must already exist", metavar="character"),
+    make_option(c("-m", "--metadata_file"), type="character", default="", 
+               help="tab-separated file with sample information, rows correspond to each sample and 
+               columns must include 'sample_id' with the name of the sample it should match the name 
+               of fastq files; and 'condition' column with values 'treated' and 'control'", metavar="character"),
+    make_option(c("-gff", "--gfffile"), type="character", default="", 
+               help="exon annotation file in gff format.", metavar="character"),
+    make_option(c("-f", "--fasta_tx"), type="character", default="", 
+               help="Fasta sequences of annotated transcripts; i.e.gencode.v36.transcripts.fa", metavar="character"),
+ )
+ 
+opt_parser = OptionParser(option_list=option_list,usage = "usage: Rscript --vanilla %prog [options]",
+                          description = "This script performs: 1) Gene-counts 2) DESeq2 analysis 3) DEXSeq analysis and 4) IsoformSwitchAnalyzer. \n
+                          the bamdir must contain the bam files and a tab-separated file with the metadata information with the condition. \n
+                          The metadata file must contain a sample_id column that must match the fastq file names");
+opt = parse_args(opt_parser);
+
+if (opt$bamdir=="" | opt$gtffile=="" | opt$layout=="" | opt$outdir=="" | opt$metadata_file==""| opt$gfffile==""| opt$fasta_tx==""){
+  print_help(opt_parser)
+  stop("Input files not suplied", call.=FALSE)
+}
+
+bamdir <- opt$bamdir
+layoutbam <- opt$layout
+gtffile <- opt$gtffile 
+outdir <- opt$outdir 
+metadata_file <- opt$metadata_file
+gff_dir <- opt$gfffile  
+transcript_fa <- opt$fasta_tx
+#######################
+###Count reads
+#######################
+
+print("###################")
+print("#####STEP 1 of 4 ######")
+print("Counting gene-level reads")
+print("###################")
+
+library(dplyr)
+library(Rsubread)
+
+file.exists(bamdir,bamfiles) #Verify that the bam files exist
+file.exists(gtffile) #Verify that the gtf files exist
+bamfiles <- list.files(bamdir,pattern = ".bam$")
+dir.create(path = paste0(outdir,"gene_counts/"))
+
+if (layoutbam=="single"){
+#Count single-end samples
+for (bamfile in bamfiles){
+  fc <- featureCounts(files=paste0(bamdir,bamfile),
+                      annot.ext=gtffile,
+                      isGTFAnnotationFile=TRUE,
+                      isPairedEnd=FALSE)
+  count_matrix <- as.data.frame(fc$counts)
+  column_names <- colnames(count_matrix)
+  count_matrix <- count_matrix %>%
+    mutate("ensembl_gene_id_version"=rownames(count_matrix)) %>%
+    select(ensembl_gene_id_version,all_of(column_names))
+  write.table(count_matrix,
+              file=paste0(outdir,"gene_counts/",bamfile,"_raw_count_matrix.txt"),
+              quote = FALSE,
+              sep = "\t",
+              row.names = FALSE)
+}}
+
+if (layoutbam=="paired"){
+  #Count paired-end samples
+  for (bamfile in bamfiles){
+    fc <- featureCounts(files=paste0(bamdir,bamfile),
+                        annot.ext=gtffile,
+                        isGTFAnnotationFile=TRUE,
+                        isPairedEnd=TRUE,
+                        requireBothEndsMapped=TRUE)
+    count_matrix <- as.data.frame(fc$counts)
+    column_names <- colnames(count_matrix)
+    count_matrix <- count_matrix %>%
+      mutate("ensembl_gene_id_version"=rownames(count_matrix)) %>%
+      select(ensembl_gene_id_version,all_of(column_names))
+    write.table(count_matrix,
+                file=paste0(outdir,"gene_counts/",bamfile,"_raw_count_matrix.txt"),
+                quote = FALSE,
+                sep = "\t",
+                row.names = FALSE)
+  }}
+
+print ("gene-level counts done")
+
+#######################
+###DEG analysis deseq2
+#######################
+print("###################")
+print("#####STEP 2 of 4 ######")
+print("DEG analysis DESeq2")
+print("###################")
+
+setwd(paste0(outdir,"gene_counts/"))
+
+##import sample metadata
+library(reshape)
+library(dplyr)
+
+sample_data <- read.table(metadata_file,header=TRUE,sep="\t")
+sample_data <- sort_df(sample_data,vars = "sample_id")
+# sample_data dataframe must contain: 1) sample_id column, 
+#this must match the prefix string used in the preprocessing, 
+#it must match somehow the names of the gene count files created in the preprocessing part
+
+filenames <- list.files(paste0(outdir,"gene_counts/"))
+sample_data$filename <- filenames
+
+rownames(sample_data) <- sample_data$sample_id
+
+##create count table by importing the corresponding count files
+gene_counts.list<-list()
+for (sample in sample_data$sample_id)){
+  gene_counts.list[[sample]]<-read.delim(sample_data$filename[sample],header = TRUE,sep = "\t")
+}
+names(gene_counts.list)<-sample_data$sample_id
+library(plyr)
+count_matrix <- join_all(gene_counts.list, by='ensembl_gene_id_version', type='left')
+colnames(count_matrix) <- c("ensembl_gene_id_version",sample_data$sample_id)
+rownames(count_matrix) <- count_matrix$ensembl_gene_id_version
+
+## DIfferential expression analysis
+library(DESeq2)
+count_matrix$ensembl_gene_id_version <- NULL
+
+dds <- DESeqDataSetFromMatrix(
+  countData = count_matrix,
+  colData = sample_data,
+  design = ~ condition)
+dds$condition <- relevel( dds$condition, "control" )
+as.data.frame( colData(dds) )
+dds <- DESeq(dds)
+res <- as.data.frame(results(dds))
+results <- res %>% 
+  mutate(ensembl_gene_id_version=rownames(res)) #Dataframe with all results for all genes
+save(dds, file = paste0("dds.RData"))
+write.table(results,file=paste0(outdir,"gene_counts/degs_deseq2.txt"),quote = FALSE,sep = "\t",row.names = TRUE)
+
+#######################
+###EXON ANALYSIS
+#######################
+print("###################")
+print("#####STEP 3 of 4 ######")
+print("DEG analysis deseq2")
+print("###################")
+
+setwd(paste0(outdir,"exon_counts/")) 
+library(dplyr)
+library(DEXSeq)
+
+filenames <- list.files(paste0(outdir,"exon_counts/"))
+
+sample_data <- sample_data %>%
+  mutate(filename=filenames)
+
+##analysis for dataset
+rownames(sample_data) <- sample_data$sample_id
+countFiles = sample_data$filenames
+
+dxd = DEXSeqDataSetFromHTSeq(
+  countFiles,
+  sampleData=sample_data,
+  design= ~ sample_id + exon + condition:exon,
+  flattenedfile=gff_dir)
+
+dxd$condition <- relevel(dxd$condition, "control")
+
+dxd = estimateSizeFactors( dxd )
+dxd = estimateDispersions( dxd )
+dxd = testForDEU( dxd )
+dxd = estimateExonFoldChanges( dxd, fitExpToVar="condition")
+dxr1 = DEXSeqResults( dxd )
+
+save(dxr1, file = paste0("dxr1.RData"))
+
+write.csv(as.data.frame(dxr1),file=paste0(outdir,"exon_counts/dexs_dexseq.csv"))
+
+print("number of exons affected")
+table ( dxr1$padj < 0.1 )
+
+print("number of genes affected")
+table ( tapply( dxr1$padj < 0.1, dxr1$groupID, any ) )
+
+#######################
+###isoform analysis
+#######################
+
+print("###################")
+print("#####STEP 4 of 4 ######")
+print("isoform analysis")
+print("###################")
+
+setwd(paste0(outdir,"pseudocounts"))
+library(dplyr)
+library(IsoformSwitchAnalyzeR)
+
+filenames <- list.dirs(full.names = FALSE)
+filenames <- filenames[-1]
+
+sampleTable <- sample_data %>%
+  mutate(filename=filenames) %>%
+  dplyr::select(filename, condition)
+
+sampleTable <- sampleTable[order(sampleTable$filename),]
+sampleTable <- droplevels(sampleTable)
+colnames(sampleTable) <- c("sampleID","condition")
+rownames(sampleTable) <- sampleTable$sampleID
+
+kallistoQuant <- importIsoformExpression(parentDir = paste0(outdir,"pseudocounts/"))
+
+aSwitchList <- importRdata(
+  isoformCountMatrix   = kallistoQuant$counts,
+  isoformRepExpression = kallistoQuant$abundance,
+  designMatrix         = sampleTable,
+  isoformExonAnnoation = gtffile,
+  isoformNtFasta       = transcript_fa,
+  fixStringTieAnnotationProblem = TRUE,
+  showProgress = TRUE)
+
+
+
+summary(aSwitchList)
+
+aSwitchList <- isoformSwitchTestDEXSeq(
+  switchAnalyzeRlist = aSwitchList,
+  reduceToSwitchingGenes=FALSE)
+
+extractSwitchSummary(aSwitchList)
+
+aSwitchList <- analyzeORF(
+  aSwitchList,
+  orfMethod = "longest",
+  showProgress=TRUE
+)
+
+exampleSwitchListAnalyzed <- analyzeAlternativeSplicing(
+  switchAnalyzeRlist = aSwitchList,
+  quiet=FALSE
+)
+
+table(exampleSwitchListAnalyzed$AlternativeSplicingAnalysis$IR )
+
+
+extractSwitchSummary(exampleSwitchListAnalyzed, dIFcutoff = 0.1, filterForConsequences = FALSE)
+
+save(exampleSwitchListAnalyzed, file="exampleSwitchListAnalyzed.RData")
+
+signifcant_switches<-extractTopSwitches(
+  exampleSwitchListAnalyzed,
+  extractGenes = FALSE,
+  filterForConsequences = FALSE,
+  n = NA,
+  sortByQvals = TRUE
+)
+
+write.table(signifcant_switches,file=paste0(outdir,"pseudocounts/isoform_signifcant_switches.txt"),quote = FALSE,sep = "\t",row.names = FALSE)
+
+
+signifcant_genes<- extractTopSwitches(
+  exampleSwitchListAnalyzed,
+  extractGenes = TRUE,
+  filterForConsequences = FALSE,
+  n = NA,
+  sortByQvals = TRUE
+)
+
+write.table(signifcant_genes,file=paste0(outdir,"pseudocounts/_isoform_signifcant_genes.txt"),quote = FALSE,sep = "\t",row.names = FALSE)
