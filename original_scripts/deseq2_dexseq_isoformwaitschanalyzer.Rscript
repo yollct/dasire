@@ -277,4 +277,4 @@ signifcant_genes<- extractTopSwitches(
   sortByQvals = TRUE
 )
 
-write.table(signifcant_genes,file=paste0(outdir,"pseudocounts/_isoform_signifcant_genes.txt"),quote = FALSE,sep = "\t",row.names = FALSE)
+write.table(signifcant_genes,file=paste0(outdir,"pseudocounts/isoform_signifcant_genes.txt"),quote = FALSE,sep = "\t",row.names = FALSE)
