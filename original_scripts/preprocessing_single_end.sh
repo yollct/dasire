@@ -1,4 +1,6 @@
 #!bin/bash/
+# I run this script like this: nohup bash preprocessing_single_end.sh [options] > preprocessing.out
+# The preprocessing.out file is used to get the alignment statistics of kallisto.
 #
 # Requirements:
 #   - STAR version 020201
@@ -9,13 +11,12 @@
 #   - Trimmomatic-0.39
 #   - Genome annotation: Gencode Homo sapiens v.36
 #
-# This script works asuming it is run form the a directory that contains: 
-#   - the gzipped raw fastq files used as input: input_SE.fastq.gz
+# This script works asuming it is run form the directory that contains: the gzipped raw fastq files used as input (i.e. input_SE.fastq.gz)
 #
 # Options:
 #   --exon_custom_annotation    It is a custom annotation file with exons only, it is created from the original 
 #                               annotation for that organism as input, in my case I used the gencode annotation for human (*gencode.v36.annotation.gtf* 
-#                               to generate the custom exon annotation named *gencode.v36.annotation.dexseq.gff*). This file has to be created only one 
+#                               to generate the custom exon annotation named *gencode.v36.annotation.dexseq.gff*). This file has to be created only once 
 #                               for each different annotation. The DEXseq package has the python script to create this custom file. More info here:
 #                               https://bioconductor.org/packages/release/bioc/vignettes/DEXSeq/inst/doc/DEXSeq.html#24_Preparing_the_annotationAnnotation
 #
