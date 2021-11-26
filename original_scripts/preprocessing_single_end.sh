@@ -9,6 +9,7 @@
 #       https://bioconductor.org/packages/release/bioc/vignettes/DEXSeq/inst/doc/DEXSeq.html#23_HTSeq
 #   - kallisto version 0.46.1
 #   - Trimmomatic-0.39
+#   - MultiQC version 1.10.dev0
 #   - Genome annotation: Gencode Homo sapiens v.36
 #
 # This script works asuming it is run form the directory that contains: the gzipped raw fastq files used as input (i.e. input_SE.fastq.gz)
