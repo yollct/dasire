@@ -98,4 +98,6 @@ echo "counting $i"
 kallisto quant -i $transcripts_index -o pseudocounts/$i --bias --single -l $fragment_length -s 20 $i
 done
 
+multiqc .
+
 echo "all finished"
