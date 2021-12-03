@@ -1,0 +1,569 @@
+---
+title: "Quality check, differential expression and splicing analysis"
+runtime: shiny
+output:
+  html_notebook:
+    toc: yes
+    toc_float: no
+---
+
+# Experiment info
+
+```{r}
+# metadata.txt is a tab separated file with the info of samples and conditions. It is the same file used a sample metadata for splicing analysis in the deseq2_dexseq_isoformswitchanalyzer.Rscript
+library(DT)
+library(reshape2)
+library(dplyr)
+sample_info <- read.table("metadata.txt",header = TRUE,sep = "\t")
+DT::datatable(sample_info)
+```
+
+# Preprocessing statistics
+
+## Alignment to genome - STAR
+
+```{r}
+library(reshape2)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+# Import STAR alignment statistics
+alignment_stats_star <- read.table(file = "multiqc_data/multiqc_star.txt",header = TRUE,sep = "\t")
+alignment_stats_star <- melt(data = alignment_stats_star,id.vars="Sample")#,"total_reads","avg_input_read_length"))
+
+#Plot percentage of reads aligned to the genome
+alignment_stats_star$value <- as.numeric(alignment_stats_star$value)
+renderPlot({
+alignment_stats_star %>%
+  dplyr::filter(grepl(pattern = "percent",x = alignment_stats_star$variable)) %>%
+  ggplot(aes(x = value, y = Sample)) +
+  geom_bar(aes(fill = variable), stat="identity") + 
+  scale_fill_viridis(discrete = TRUE,alpha = 0.75,option = "D",direction = 1) +
+  theme_classic()+
+  ggtitle(label = "Percentage of reads aligned with STAR")+
+  theme(#legend.position=c(0.1, 0.7),
+        axis.text.x = element_text(angle = 45,hjust = 1),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        legend.background = element_rect(fill = "transparent", colour = NA),
+        legend.box.background = element_rect(fill = "transparent", colour = NA))
+})
+```
+
+
+```{r}
+renderPlot({
+alignment_stats_star %>%
+  dplyr::filter(grepl(pattern = "read_length",x = alignment_stats_star$variable)) %>%
+  ggplot(aes(x = value, y = variable)) +
+  geom_bar(aes(fill=Sample),position = "dodge",stat="identity") + 
+  scale_fill_viridis(discrete = TRUE,alpha = 0.75,option = "D",direction = 1) +
+  theme_classic()+
+  ggtitle(label = "Percentage of reads aligned with STAR")+
+  theme(#legend.position=c(0.1, 0.7),
+        axis.text.x = element_text(angle = 45,hjust = 1),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        legend.background = element_rect(fill = "transparent", colour = NA),
+        legend.box.background = element_rect(fill = "transparent", colour = NA))
+})
+```
+
+
+## Pseudoalignment to transcriptome - Kallisto
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5,fig.width=10,dev.args = list(bg = 'transparent')}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(plotly)
+alignment_stats_kallisto <- read.csv("multiqc_data/multiqc_kallisto.txt",header = TRUE,sep = "\t")
+alignment_stats_kallisto <- melt(data = alignment_stats_kallisto,id.vars="Sample")#,"total_reads","avg_input_read_length"))
+renderPlot({
+alignment_stats_kallisto %>%
+  dplyr::filter(grepl(pattern = "percent",x = alignment_stats_kallisto$variable)) %>%
+  ggplot(aes(x = value, y = Sample)) +
+  geom_bar(aes(fill = variable), stat="identity",) +
+  scale_fill_viridis(discrete = TRUE,alpha = 0.75,option = "D",direction = 1)+
+  xlim(0,100)+
+  theme_classic()+
+  ggtitle(label = "Percentage of reads pseudoaligned with Kallisto")+
+  theme(#legend.position=c(0.1, 0.7),
+        axis.text.x = element_text(angle = 45,hjust = 1),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        legend.background = element_rect(fill = "transparent", colour = NA),
+        legend.box.background = element_rect(fill = "transparent", colour = NA))
+})
+```
+
+# Verification of biological conditions
+
+## Distance between samples 
+
+```{r}
+library(RColorBrewer)
+library(pheatmap)
+library(DESeq2)
+library(ggpubr)
+load(file = "gene_counts/dds.RData")
+vst <- vst(dds, blind=FALSE)
+sampleDists <- dist(t(assay(vst)))
+sampleDistsMatrix <- as.matrix(sampleDists)
+
+colors <- colorRampPalette( rev(brewer.pal(length(dds$sample), "Blues")) )(255)
+
+renderPlot({
+pheatmap(sampleDistsMatrix,clustering_distance_rows=sampleDists,clustering_distance_cols=sampleDists,col=colors,legend = FALSE,main = "Sample distances",treeheight_row = 10,treeheight_col = 20)
+})
+```
+
+## Sanity check of the datasets | PCA of samples
+
+```{r}
+PCA_plot <- plotPCA(vst, intgroup=c("condition"))
+renderPlot({
+PCA_plot +
+    theme_classic(base_size = 12)+
+    theme(#legend.position=c(0.1, 0.9),
+          aspect.ratio = 1,
+          plot.title = element_text(size = 12),#color = "red",, face = "bold"),
+          axis.text.x = element_text(size = 8),
+          axis.title.x = element_text(size = 10),
+          axis.text.y = element_text(size = 8),
+          axis.title.y = element_text(size = 10),
+          legend.position = "left",
+          axis.ticks = element_blank(),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect(fill = "transparent",colour = NA),
+          plot.background = element_rect(fill = "transparent",colour = NA),
+          legend.background = element_rect(fill = "transparent", colour = NA),
+          legend.box.background = element_rect(fill = "transparent", colour = NA))
+})
+```
+
+## Sanity check of the datasets | Expression of specific genes
+
+```{r}
+
+library(DESeq2)
+library(ggplot2)
+degs<-read.table(file = "gene_counts/degs_deseq2.txt",header = TRUE,sep = "\t")
+
+selectInput("gene_name", label = "Gene",
+              choices = unique(degs$ensembl_gene_id_version))
+
+renderPlot({
+  gene_counts <- plotCounts(dds, 
+                           gene=input$gene_name, 
+                           intgroup="condition", 
+                           returnData=TRUE)
+  
+ggplot(gene_counts, aes(x = condition, y = count,col=condition)) +
+  geom_point() +
+  scale_color_brewer(palette = "Set1",)+
+    theme_classic(base_size = 12)+
+    # ggtitle(label = i,subtitle = element_blank())+
+    theme(#legend.position=c(0.9, 0.9),
+          # aspect.ratio = 1,
+          # axis.text.x = element_text(size = 8),
+          # axis.title.x = element_text(size = 10),
+          # axis.text.y = element_text(size = 8),
+          # axis.title.y = element_text(size = 10),
+          legend.position = "none",
+          axis.ticks = element_blank(),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect(fill = "transparent",colour = NA),
+          plot.background = element_rect(fill = "transparent",colour = NA),
+          legend.background = element_rect(fill = "transparent", colour = NA),
+          legend.box.background = element_rect(fill = "transparent", colour = NA))+
+  scale_y_log10()+
+  labs(y="log10(normalized_counts)",col="Condition")
+})
+```
+
+## Sanity check - Volcano plot
+
+```{r}
+library(dplyr)
+library(biomaRt)
+library(ggplot2)
+degs<-read.table(file = "gene_counts/degs_deseq2.txt",header = TRUE,sep = "\t")
+degs$ensembl_gene_id <- gsub(pattern = "\\..*$",replacement = "",x=degs$ensembl_gene_id_version)
+
+mart_export <- read.delim(file = "databases/mart_export.txt")
+
+degs <- dplyr::left_join(degs,mart_export,by="ensembl_gene_id")
+renderPlot({
+ggplot(data=degs,aes(x=log2FoldChange,y=-log10(padj))) +
+  geom_vline(xintercept=c(-log2(1.5),log2(1.5)), color="red")+ 
+  geom_hline(yintercept=-log10(0.05), color="blue")+ 
+  geom_point(color="black",alpha=0.5,stat="identity")+
+  xlim(-10,10)
+  })
+```
+
+# Differential gene expression 
+
+## Expression of splicing factors
+
+```{r}
+sf_genes<- read.delim(file = "databases/splicing_factors_list.txt")
+
+library(ggplot2)
+library(RColorBrewer)
+heatmap_sf <- degs[degs$external_gene_name %in% sf_genes$Gene,]
+heatmap_sf$padj[is.na(heatmap_sf$padj)] <- 1
+renderPlot({
+ggplot(data=heatmap_sf,aes(x=log2FoldChange, y=external_gene_name, size = 1-padj,color=log2FoldChange)) +
+  geom_point() +
+  # xlim(-1,1)+
+  # scale_size(range = c(1, 10), name="padj")+
+  theme_classic()+
+  geom_vline(xintercept=c(-log2(1.5),log2(1.5)), color="black")+
+  scale_color_gradient2(midpoint=0, low="#313695", mid="#FFFFBF",
+                     high="#A50026", space ="Lab" )
+})
+```
+
+## The list of DEGs
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(DT)
+library(dplyr)
+degs %>%
+  dplyr::select(external_gene_name,ensembl_gene_id,log2FoldChange,padj,baseMean,lfcSE,stat,pvalue) %>%
+  datatable()
+```
+
+
+# Splicing analysis - Isoform-level (IsoformSwitchAnalyzer)
+
+## Isoform-level (IsoformSwitchAnalyzer) - number of genes
+
+```{r}
+library(IsoformSwitchAnalyzeR)
+load(file = "pseudocounts/exampleSwitchListAnalyzed.RData")
+datatable(extractSwitchSummary(exampleSwitchListAnalyzed))
+```
+
+## Switchplot 
+```{r,fig.height=20}
+# Runs only in shiny
+isa_genes <- read.delim(file = "pseudocounts/isoform_signifcant_genes.txt")
+
+selectInput("gene_name", label = "Gene",
+              choices = unique(isa_genes$gene_name))
+renderPlot({
+  switchPlot(exampleSwitchListAnalyzed,
+             gene=input$gene_name)
+})
+```
+
+## Plot Splicing summary 
+```{r}
+renderPlot({
+extractSplicingSummary(
+    exampleSwitchListAnalyzed,
+    asFractionTotal = FALSE,
+    plotGenes=FALSE
+)
+})
+```
+
+# Splicing enrichment
+```{r}
+renderPlot({
+splicingEnrichment <- extractSplicingEnrichment(
+    exampleSwitchListAnalyzed,
+    splicingToAnalyze='all',
+    returnResult=TRUE,
+    returnSummary=FALSE
+)
+})
+```
+
+# Splicing genome-wide
+```{r}
+renderPlot({
+extractSplicingGenomeWide(
+    exampleSwitchListAnalyzed,
+    featureToExtract = 'all',                 # all isoforms stored in the switchAnalyzeRlist
+    splicingToAnalyze = c('A3','MES','ATSS'), # Splice types significantly enriched in COAD
+    plot=TRUE,
+    returnResult=FALSE  # Preventing the summary statistics to be returned as a data.frame
+)
+})
+```
+
+
+# Exon-level - DEXSeq 
+
+## Number of exons and genes
+
+```{r }
+# pvalue_threshold= 0.1 ##set this parameter
+# foldchange_threshold=1.5 ##set this parameter
+# dexseq_genes <- read.csv(file = "exon_counts/dexs_dexseq.csv",header = TRUE,row.names = NULL)
+load(file = "exon_counts/dxr1.RData")
+significant_exons <- as.data.frame(dxr1) %>%
+  dplyr::filter(padj < 0.1 )
+genes <- unique(significant_exons$groupID)
+#Number of significant exons 
+print(paste0("Total number of exons evaluated: ",sum(table ( dxr1$padj < 0.1 )) ))
+print(paste0("Total number of exons differentially expressed: ",table ( dxr1$padj < 0.1 )[2]) )
+
+# Number of genes
+print(paste0("Total number of genes evaluated: ",sum(table(tapply( dxr1$padj < 0.1, dxr1$groupID, any)))))
+print(paste0("Total number of genes with at least one exon differentially expressed: ",table(tapply(dxr1$padj < 0.1, dxr1$groupID, any))[2]))
+```
+
+
+## Visualization 
+```{r}
+library(DEXSeq)
+selectInput("gene_name", label = "Gene",
+              choices = genes)
+renderPlot({
+  plotDEXSeq(dxr1, gene=input$gene_name, legend=TRUE, cex.axis=1.2, cex=1.3, lwd=2 )
+})
+```
+
+## The full list of genes with differentially expressed exons
+
+```{r}
+library(DT)
+DT::datatable(significant_exons,class="display",rownames=F,filter="top")#,editable=F,extensions = "Buttons",options = list(dom="Bfrtip",buttons=c("copy","csv","excel","pdf","print")))
+```
+
+# Event-level - MAJIQ 
+
+## Classify events by event type
+
+```{r}
+## Import original majiq tsv output files and parse them to generate the dataframes containing positive  and negative events for each event type
+
+#voila_res_all --> dataframe with original tsv output file from majiq and voila with ALL events detected
+#voila_res --> dataframe with original tsv output file from majiq with POSITIVE events only
+"%notin%" <- Negate("%in%")
+library(dplyr)
+
+voila_res_all <- read.delim(file = "majiq_output/voila_results_all.tsv",header = TRUE,sep = "\t")
+voila_res <- read.delim(file = "majiq_output/voila_results.tsv",header = TRUE,sep = "\t")
+
+################
+## Exon Skipping
+################
+
+# majiq.es.all --> df with ALL ES events detected
+# majiq.es.pos --> df with POSITIVE ES events
+# majiq.es.neg --> df with NEGATIVE ES events
+
+  ## Get all ES events
+majiq.es.all <- voila_res_all %>%
+  dplyr::filter(ES =="True" & A5SS =="False" & A3SS =="False" & IR.coords=="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get POSITIVE ES events
+majiq.es.pos <- voila_res %>%
+  dplyr::filter(ES =="True" & A5SS =="False" & A3SS =="False" & IR.coords=="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get NEGATIVE ES events
+temp <- data.frame(do.call("rbind", strsplit(x = majiq.es.all$E.dPSI..per.LSV.junction,split = ";",fixed = TRUE)))
+temp  <- as.data.frame(apply(temp, 2, as.numeric))
+keep <- apply(temp < 0.001 & temp > -0.001, 1, all, na.rm=TRUE)
+temp  <- as.data.frame(cbind(temp,majiq.es.all$LSV.ID))
+majiq.es.neg <- majiq.es.all[keep,]
+rm(temp,keep)
+
+################
+## A3SS
+################
+
+# majiq.a3.all --> df with ALL A3 events
+# majiq.a3.pos --> df with POSITIVE A3 events
+# majiq.a3.neg --> df with NEGATIVE A3 events
+
+  ## Get all A3 events
+majiq.a3.all <- voila_res_all %>%
+  dplyr::filter(ES =="False" & A5SS =="False" & A3SS =="True" & IR.coords=="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get POSITIVE A3 events
+majiq.a3.pos <- voila_res %>%
+  dplyr::filter(ES =="False" & A5SS =="False" & A3SS =="True" & IR.coords=="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get NEGATIVE A3 events
+temp <- data.frame(do.call("rbind", strsplit(x = majiq.a3.all$E.dPSI..per.LSV.junction,split = ";",fixed = TRUE)))
+temp  <- as.data.frame(apply(temp, 2, as.numeric))
+keep <- apply(temp < 0.001 & temp > -0.001, 1, all, na.rm=TRUE)
+temp  <- as.data.frame(cbind(temp,majiq.a3.all$LSV.ID))
+majiq.a3.neg <- majiq.a3.all[keep,]
+rm(temp,keep)
+
+################
+## A5SS
+################
+
+# majiq.a5.all --> df with ALL A5 events
+# majiq.a5.pos --> df with POSITIVE A5 events
+# majiq.a5.neg --> df with NEGATIVE A5 events
+
+  ## Get all A5 events
+majiq.a5.all <- voila_res_all %>%
+  dplyr::filter(ES =="False" & A5SS =="True" & A3SS =="False" & IR.coords=="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get POSITIVE A5 events
+majiq.a5.pos <- voila_res %>%
+  dplyr::filter(ES =="False" & A5SS =="True" & A3SS =="False" & IR.coords=="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get NEGATIVE A5 events
+temp <- data.frame(do.call("rbind", strsplit(x = majiq.a5.all$E.dPSI..per.LSV.junction,split = ";",fixed = TRUE)))
+temp  <- as.data.frame(apply(temp, 2, as.numeric))
+keep <- apply(temp < 0.001 & temp > -0.001, 1, all, na.rm=TRUE)
+temp  <- as.data.frame(cbind(temp,majiq.a5.all$LSV.ID))
+majiq.a5.neg <- majiq.a5.all[keep,]
+rm(temp,keep)
+
+################
+## IR
+################
+
+# majiq.ir.all --> df with ALL IR events
+# majiq.ir.pos --> df with POSITIVE IR events
+# majiq.ir.neg --> df with NEGATIVE IR events
+
+  ## Get all IR events
+majiq.ir.all <- voila_res_all %>%
+  dplyr::filter(ES =="False" & A5SS =="False" & A3SS =="False" & IR.coords!="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get POSITIVE IR events
+majiq.ir.pos <- voila_res %>%
+  dplyr::filter(ES =="False" & A5SS =="False" & A3SS =="True" & IR.coords!="")  %>%
+  dplyr::filter(!grepl('na', LSV.ID))
+
+  ## Get NEGATIVE IR events
+temp <- data.frame(do.call("rbind", strsplit(x = majiq.ir.all$E.dPSI..per.LSV.junction,split = ";",fixed = TRUE)))
+temp  <- as.data.frame(apply(temp, 2, as.numeric))
+keep <- apply(temp < 0.001 & temp > -0.001, 1, all, na.rm=TRUE)
+temp  <- as.data.frame(cbind(temp,majiq.ir.all$LSV.ID))
+majiq.ir.neg <- majiq.ir.all[keep,]
+rm(temp,keep)
+
+################
+## Spliced genes with more than one event happening
+################
+majiq.moreThanOneEvent.pos <- voila_res %>%
+  dplyr::filter(LSV.ID %notin% c(majiq.es.pos$LSV.ID,majiq.a3.pos$LSV.ID,majiq.a5.pos$LSV.ID,majiq.ir.pos$LSV.ID))
+```
+
+## Number of events
+
+```{r}
+majiq.NrGenes <- data.frame(rbind(
+  c("ES",nrow(majiq.es.pos)),
+  c("IR",nrow(majiq.ir.pos)),
+  c("A3SS",nrow(majiq.a3.pos)),
+  c("A5SS",nrow(majiq.a5.pos)),
+  c("Complex",nrow(majiq.moreThanOneEvent.pos))
+))
+colnames(majiq.NrGenes) <- c("Event type","Number of genes")
+majiq.NrGenes$`Number of genes` <- as.numeric(majiq.NrGenes$`Number of genes`)
+majiq.NrGenes$fraction <- majiq.NrGenes$`Number of genes` / sum(majiq.NrGenes$`Number of genes`)
+majiq.NrGenes$ymax <- cumsum(majiq.NrGenes$fraction)
+majiq.NrGenes$ymin <- c(0, head(majiq.NrGenes$ymax, n=-1))
+majiq.NrGenes$labelPosition <- (majiq.NrGenes$ymax + majiq.NrGenes$ymin) / 2
+majiq.NrGenes$label <- paste0(majiq.NrGenes$`Event type`, "\n", majiq.NrGenes$`Number of genes`)
+
+renderPlot({
+ggplot(majiq.NrGenes, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=`Event type`)) +
+  geom_rect() +
+  geom_label( x=c(3.5,3.0,3.5,4,3), aes(y=labelPosition, label=label), size=5) +
+  scale_fill_brewer(palette=4) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) +
+  theme_void() +
+  theme(legend.position = "none")
+})
+```
+
+```{r}
+majiq.heatmap <- majiq.moreThanOneEvent.pos %>% 
+  dplyr::select(A5SS,A3SS,ES,IR.coords) %>%
+  mutate(IR.coords=if_else(IR.coords!="", true="True",false="False"))
+
+majiq.heatmap <- as.data.frame(table(majiq.heatmap))
+
+majiq.heatmap <- majiq.heatmap %>%
+  dplyr::filter(!(A3SS=="True" & A5SS=="False" & IR.coords=="False" & ES=="False"))%>%
+  dplyr::filter(!(A3SS=="False" & A5SS=="True" & IR.coords=="False" & ES=="False"))%>%
+  dplyr::filter(!(A3SS=="False" & A5SS=="False" & IR.coords=="True" & ES=="False"))%>%
+  dplyr::filter(!(A3SS=="False" & A5SS=="False" & IR.coords=="False" & ES=="True"))%>%
+  dplyr::filter(!(A3SS=="False" & A5SS=="False" & IR.coords=="False" & ES=="False"))
+  
+majiq.heatmap <- t(majiq.heatmap)
+rownames(majiq.heatmap) <- c("A5SS","A3SS","ES","IR","Freq")
+library(ComplexHeatmap)
+col_ha = HeatmapAnnotation(NrGenes = anno_barplot(as.numeric(majiq.heatmap[5,]),
+                                                  add_numbers=TRUE,
+                                                  height = unit(7,"cm"),gp=gpar(fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2")[3])),
+                           Genes = anno_simple(as.numeric(majiq.heatmap[5,]),pch = majiq.heatmap[5,]))
+renderPlot({
+Heatmap(matrix = majiq.heatmap[1:4,],
+        col = c("False"="White","True"="grey"),#RColorBrewer::brewer.pal(n = 3,name = "Dark2")[3]),
+        border = TRUE,
+        cluster_columns = FALSE,
+        cluster_rows = FALSE,
+        height = unit(3,"cm"),
+        name = "mat", 
+        show_heatmap_legend = FALSE,
+        width = unit(11,"cm"),
+        top_annotation = col_ha,
+        cell_fun = function(j, i, x, y, width, height, fill) {
+        grid.rect(x = x, y = y, width = width, height = height, 
+            gp = gpar(col = "black", fill = NA))})
+})
+```
+
+# Comparative analysis of the different splicing tools' results
+
+```{r}
+genes.iso <- read.delim(file = "pseudocounts/isoform_signifcant_genes.txt")
+genes.iso <- unique(genes.iso$gene_id)
+
+load(file = "exon_counts/dxr1.RData")
+genes.exo <- as.data.frame(dxr1) %>%
+  dplyr::filter(padj < 0.1 )
+genes.exo <- unique(genes.exo$groupID)
+
+genes.majiq <- read.delim(file = "majiq_output/voila_results.tsv",header = TRUE,sep = "\t")
+genes.majiq <- unique(genes.majiq$Gene.ID)
+
+library(VennDiagram)
+venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
+                      IsoformSwitchAnalyzer=genes.iso,
+                      Majiq=genes.majiq),
+             filename = NULL,
+             col="black",
+             fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2")
+)
+renderPlot({
+grid.newpage(); grid::grid.draw(venn.splicing)
+})
+```
