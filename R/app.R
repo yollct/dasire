@@ -43,7 +43,7 @@ ui <- dashboardPage(
                     div(
                         id="start_panel",
                         column(12,
-                            h2("Welcome!")
+                               h2("Welcome!")
                         )
                     )
                 )
@@ -56,47 +56,47 @@ ui <- dashboardPage(
                     id="import_panel",
                     fluidRow(
                         column(12,
-                            box(
-                                title="Select your data",
-                                div(
-                                    checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
-                                    fileInput(
-                                        inputId = "rnaseq_csv",
-                                        label="Choose RNAseq data you want to run.",
-                                        accept = "text/csv"
-                                    ),
-                                    checkboxInput("header_rna", "Header", value=TRUE),
-                                    textInput("rnaseq_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
-                                    fileInput(
-                                        inputId = "rnaseq_meta",
-                                        label="Choose meta data for your data.",
-                                        accept="text/csv"
-                                    ),
-                                    checkboxInput("header_rnameta", "Header", value=TRUE),
-                                    textInput("rnaseq_meta_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
-                                ),
-                                p("Some bugs here, press upload two times so you can choose sample columns"),
-                                div(
-                                    actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
-                                )
-                            ),
-                            box(
-                                title="Select CHIP-seq data you want to run.",
-                                div(
-                                    fileInput(inputId = "chipseq_csv", label="Choose your CHIPseq data", accept=".csv"),
-                                    actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
-                                )
-                            )
+                               box(
+                                   title="Select your data",
+                                   div(
+                                       checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
+                                       fileInput(
+                                           inputId = "rnaseq_csv",
+                                           label="Choose RNAseq data you want to run.",
+                                           accept = "text/csv"
+                                       ),
+                                       checkboxInput("header_rna", "Header", value=TRUE),
+                                       textInput("rnaseq_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
+                                       fileInput(
+                                           inputId = "rnaseq_meta",
+                                           label="Choose meta data for your data.",
+                                           accept="text/csv"
+                                       ),
+                                       checkboxInput("header_rnameta", "Header", value=TRUE),
+                                       textInput("rnaseq_meta_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
+                                   ),
+                                   p("Some bugs here, press upload two times so you can choose sample columns"),
+                                   div(
+                                       actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
+                                   )
+                               ),
+                               box(
+                                   title="Select CHIP-seq data you want to run.",
+                                   div(
+                                       fileInput(inputId = "chipseq_csv", label="Choose your CHIPseq data", accept=".csv"),
+                                       actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
+                                   )
+                               )
                         ),
-                    column(12,
-                        box(
-                            title="Select annotation",
-                            div(
-                                checkboxInput("gtf", "Use GENCODE gtf.", value=TRUE)
-                            )
+                        column(12,
+                               box(
+                                   title="Select annotation",
+                                   div(
+                                       checkboxInput("gtf", "Use GENCODE gtf.", value=TRUE)
+                                   )
+                               )
                         )
                     )
-                )
                 )
             )
         ),
@@ -133,7 +133,7 @@ server <- function(input, output, session) {
                               selectInput("rna_meta_var2", "Select a variable", choices=c()),
                               checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
                               bsButton("run_pca_rna", "Run DESeq2", icon=icon('chevron-right'))
-                              ),
+                     ),
                      menuItem("Differential exon"),
                      menuItem("Isoform switch"),
                      menuItem("Splicing event")
@@ -189,6 +189,7 @@ server <- function(input, output, session) {
                 modalDialog(
                     h3("Confirm using examples dataset."),
                     p("If you are importing your own data, please click 'cancel' and uncheck 'Use example data'."),
+                    selectInput("rnaseq_metacol", "Automatic sample column:", selected = "Run", choices=c()),
                     footer = tagList(
                         modalButton("Cancel"),
                         actionButton("ok_import_rna", "OK")
@@ -221,23 +222,31 @@ server <- function(input, output, session) {
     ##show import dialog
     rnaseq_df <- reactive({
         rnafile <- input$rnaseq_csv
-        if (is.null(rnafile)) {
-            showModal(import_data_modal(failed = TRUE))
-            return(NULL)
+        if (input$useexamples == TRUE){
+            df <- read.csv("../examples/sorted_pos_tpm.csv", sep="\t", header=T)
+        } else {
+            if (is.null(rnafile)) {
+                showModal(import_data_modal(failed = TRUE))
+                return(NULL)
+            }
+            df <- read.csv(rnafile$datapath, sep=input$rnaseq_sep, header=input$header_rna)
+            
         }
-        df <- read.csv(rnafile$datapath, sep=input$rnaseq_sep, header=input$header_rna)
         return(df)
     })
     
     # import meta data
     rnameta_df <- reactive({
         metafile <- input$rnaseq_meta
-        
-        if (is.null(metafile)){
-            showModal(import_data_modal(failed = TRUE))
-            return(NULL)
-        } 
-        df <- read.csv(metafile$datapath, sep=input$rnaseq_meta_sep, header=input$header_rnameta)
+        if (input$useexamples == TRUE){
+            df <- read.csv("../examples/meta.txt", sep="\t", header=T)
+        } else {
+            if (is.null(metafile)){
+                showModal(import_data_modal(failed = TRUE))
+                return(NULL)
+            } 
+            df <- read.csv(metafile$datapath, sep=input$rnaseq_meta_sep, header=input$header_rnameta)
+        }
         removeModal()
         return(df)
     })
@@ -250,7 +259,7 @@ server <- function(input, output, session) {
         sub <- metadf %>% dplyr::select(samplename) 
         return(metadf[sub[,1] %in% input$rna_samples,])
         
-        })
+    })
     
     ## generate dds object 
     #### TODO add covariates
@@ -263,7 +272,7 @@ server <- function(input, output, session) {
         dds <- DESeqDataSetFromMatrix(countData=as.matrix(seqdf[,input$rna_samples]),
                                       colData=metadf,
                                       design=formula(c("~", input$rna_meta_var1)))
-
+        
         dds
     })
     
@@ -333,7 +342,7 @@ server <- function(input, output, session) {
     observeEvent(input$renderimport_rna, {
         if (is.null(rnaseq_df()) | is.null(rnameta_df())){return()}
         updateSelectInput(session, "rnaseq_genecol", "Select the gene column", choices=colnames(rnaseq_df()))
-        updateSelectInput(session, "rnaseq_metacol", "Select the sample names column", choices=colnames(rnameta_df()))
+        updateSelectInput(session, "rnaseq_metacol", "Select the sample names column", selected = "Run", choices=colnames(rnameta_df()))
         
     })
     
@@ -346,7 +355,7 @@ server <- function(input, output, session) {
         updateCheckboxGroupInput(session, "rna_samples", "Select samples for analysis", choices=colnames(rnaseq_df()), selected=colnames(rnaseq_df()))
     })
     
-
+    
     output$check <- renderPrint({input$run_pca_rna})
     output$deseq2_panel <- renderUI({
         input$rna_pca_rna
@@ -378,7 +387,7 @@ server <- function(input, output, session) {
     output$rna_pca <- renderPlotly({
         rnapcaplot()
     })
-        
+    
     
     #################### dynamic rendering ##########################
     observeEvent("",{
@@ -387,7 +396,7 @@ server <- function(input, output, session) {
         hide("rnaseq")
         hide("deseq2_panel")
     }, once=T)
-
+    
     observeEvent(input$tabs,{
         if (input$tabs=="import"){
             show("import_panel")
