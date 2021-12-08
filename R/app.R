@@ -11,6 +11,7 @@ library(RColorBrewer)
 library(pheatmap)
 library(DESeq2)
 library(ggpubr)
+library(shinyBS)
 
 
 options(shiny.maxRequestSize=30*1024^2)
@@ -128,9 +129,9 @@ server <- function(input, output, session) {
                               tabName = "rna_qc"),
                      menuItem("Differential expression",
                               tabName="deseq2",
-                              h3("Select parameters:"),
+                              h4("Select parameters:"),
                               selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
-                              selectInput("rna_meta_var2", "Select a variable", choices=c()),
+                              selectizeInput("rna_meta_var2", "Select a variable", choices=c()),
                               checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
                               bsButton("run_pca_rna", "Run DESeq2", icon=icon('chevron-right'))
                      ),
@@ -160,20 +161,38 @@ server <- function(input, output, session) {
     output$deseq2_panels <- renderUI({
         fluidRow(
             id="deseq2_panel",
-            box(
+            column(
                 withSpinner(
                     plotlyOutput("rna_pca"),
                     type=4
                 ),
-                width=6
+                div(
+                    selectInput("deseq_result", label = "Result", choices = c()),
+                    withSpinner(
+                        plotOutput("rna_volcano"),
+                        type=4
+                    )
+                ),
+                width=4
+            ),
+            column(
+                div(
+                    selectizeInput("gene_name", label = "Gene", choices = c()),
+                    withSpinner(
+                        plotOutput("rna_genecount"),
+                        type=4
+                    )
+                ),
+                width=4
             ), 
-            box(
+            column(
                 withSpinner(
                     plotOutput("rna_heatmap"),
                     type=4
                 ),
-                width=6
+                width=4
             )
+            
         )
         # fluidRow(
         #     id="deseq2_panel",
@@ -182,7 +201,7 @@ server <- function(input, output, session) {
         #     )
         # )
     })
-    #################### data handler ##########################
+    #################### data handler / modal ##########################
     import_data_modal <- function(failed=F){
         if (failed==F){
             if (input$useexamples == TRUE){
@@ -190,6 +209,7 @@ server <- function(input, output, session) {
                     h3("Confirm using examples dataset."),
                     p("If you are importing your own data, please click 'cancel' and uncheck 'Use example data'."),
                     selectInput("rnaseq_metacol", "Automatic sample column:", selected = "Run", choices=c()),
+                    selectInput("rnaseq_genecol", "Automatic sample column:", selected = "gene", choices=c()),
                     footer = tagList(
                         modalButton("Cancel"),
                         actionButton("ok_import_rna", "OK")
@@ -218,6 +238,26 @@ server <- function(input, output, session) {
         showModal(import_data_modal())
     })
     
+    deseqlevel <- function(failed=F){
+        if (is.null(input$rna_meta_var1)){
+            modalDialog(
+                h4("Failed to set base level"),
+                p("Please input the condition column name.")
+            ) 
+        } else {
+            modalDialog(
+                selectInput("rna_deseq_level", "Select a condition as base level for DESeq2.", choices=unique(rnameta_df()[,input$rna_meta_var1])),
+                footer = tagList(
+                    actionButton("ok_base_level", "OK")
+                )
+            )
+        }
+    }
+    
+    # observeEvent(input$run_pca_rna, {
+    #     showModal(deseqlevel())
+    # })
+    
     #################### reactive object #####################3
     ##show import dialog
     rnaseq_df <- reactive({
@@ -230,7 +270,7 @@ server <- function(input, output, session) {
                 return(NULL)
             }
             df <- read.csv(rnafile$datapath, sep=input$rnaseq_sep, header=input$header_rna)
-            
+
         }
         return(df)
     })
@@ -238,6 +278,7 @@ server <- function(input, output, session) {
     # import meta data
     rnameta_df <- reactive({
         metafile <- input$rnaseq_meta
+ 
         if (input$useexamples == TRUE){
             df <- read.csv("../examples/meta.txt", sep="\t", header=T)
         } else {
@@ -251,10 +292,24 @@ server <- function(input, output, session) {
         return(df)
     })
     
+    rnaseq_df_clean <- reactive({
+        seqdf <- rnaseq_df()
+        req(input$rnaseq_genecol)
+        row.names(seqdf) <- seqdf[,input$rnaseq_genecol]
+        return(seqdf %>% dplyr::select(-input$rnaseq_genecol))
+    })
+    
+    rnaseq_meta_clean <- reactive({
+        req(input$rnaseq_metacol)
+        metadf <- rnameta_df()
+        row.names(metadf) <- metadf[,input$rnaseq_metacol]
+        return(metadf)
+    })
+    
     ## filter meta data 
     filtered_meta <- reactive({
         if (input$run_pca_rna == 0){return()}
-        metadf <- rnameta_df()
+        metadf <- rnaseq_meta_clean()
         samplename <- input$rnaseq_metacol
         sub <- metadf %>% dplyr::select(samplename) 
         return(metadf[sub[,1] %in% input$rna_samples,])
@@ -265,16 +320,26 @@ server <- function(input, output, session) {
     #### TODO add covariates
     dds_obj <- reactive({
         if (input$run_pca_rna == 0){return()}
-        seqdf <- rnaseq_df()
+        seqdf <- rnaseq_df_clean()
         metadf <- filtered_meta()
-        row.names(metadf) <- metadf$`input$rna_meta_samples`
         
         dds <- DESeqDataSetFromMatrix(countData=as.matrix(seqdf[,input$rna_samples]),
-                                      colData=metadf,
+                                      colData=metadf[input$rna_samples,],
                                       design=formula(c("~", input$rna_meta_var1)))
         
-        dds
+        dds <- DESeq(dds)
+        dds 
     })
+    
+    # dds_result <- reactive({
+    #     if (input$ok_deseq_level){
+    #         
+    #         dds <- dds_obj()
+    #         dds[,input$rna_meta_var1] <- relevel(dds[,input$rna_meta_var1], input$rna_deseq_level)
+    #         dds <- DESeq(dds)
+    #         return(dds)
+    #     }
+    # })
     
     #####output
     check_meta1 <- reactive({
@@ -289,8 +354,8 @@ server <- function(input, output, session) {
     rnapcaplot <- reactive({
         if (input$run_pca_rna == 0){return()}
         
-        seqdf <- rnaseq_df()
-        metadf <- rnameta_df()
+        seqdf <- rnaseq_df_clean()
+        metadf <- filtered_meta()
         samplenames <- input$rnaseq_metacol
         
         pr <- prcomp(t(seqdf[,input$rna_samples]))
@@ -323,7 +388,7 @@ server <- function(input, output, session) {
         
     })
     
-    ## 
+    ## heatmap rnaseq
     rnaheatmap <- reactive({
         if (input$run_pca_rna==0){return()}
         dds <- dds_obj()
@@ -337,8 +402,80 @@ server <- function(input, output, session) {
         pheatmap(sampleDistsMatrix,clustering_distance_rows=sampleDists,clustering_distance_cols=sampleDists,col=colors,legend = FALSE,main = "Sample distances",treeheight_row = 10,treeheight_col = 20)
     })
     
-    output$rna_heatmap <- renderPlot({rnaheatmap()})
+    output$rna_heatmap <- renderPlot({
+        rnaheatmap()
+        })
+    
+    check_gene <- reactive({
+        req(input$rna_meta_var1)
+        dds<-dds_obj()
+        gene_counts <- plotCounts(dds, 
+                                  gene=input$gene_name, 
+                                  intgroup=input$rna_meta_var1, 
+                                  returnData=TRUE)
+        gene_counts
+    })
+    
+    
+    ## gene plot
+    rna_genecount_plot <- eventReactive(input$gene_name, {
+        req(input$rna_meta_var1)
+        dds<-dds_obj()
+        gene_counts <- plotCounts(dds, 
+                                  gene=input$gene_name, 
+                                  intgroup=input$rna_meta_var1, 
+                                  returnData=TRUE)
+        
+        ggplot(gene_counts, aes(x = input$rna_meta_var1, y = count, col=input$rna_meta_var1)) +
+            geom_point() +
+            scale_color_brewer(palette = "Set1",)+
+            theme_classic(base_size = 12)+
+            # ggtitle(label = i,subtitle = element_blank())+
+            theme(#legend.position=c(0.9, 0.9),
+                # aspect.ratio = 1,
+                # axis.text.x = element_text(size = 8),
+                # axis.title.x = element_text(size = 10),
+                # axis.text.y = element_text(size = 8),
+                # axis.title.y = element_text(size = 10),
+                legend.position = "none",
+                axis.ticks = element_blank(),
+                panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank(),
+                panel.background = element_rect(fill = "transparent",colour = NA),
+                plot.background = element_rect(fill = "transparent",colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                legend.box.background = element_rect(fill = "transparent", colour = NA))+
+            scale_y_log10()+
+            labs(y="log10(normalized_counts)",col="Condition")
+        
+    })
+    
+    output$rna_genecount <- renderPlot({
+        rna_genecount_plot()
+    })
+    
+    rna_volcano_plot <- reactive({
+        dds <- dds_obj()
+        req(input$deseq_result)
+        
+        
+        deg <- data.frame(results(dds, name=input$deseq_result))
+        
+        ggplot(data=deg,aes(x=log2FoldChange,y=-log10(padj))) +
+            geom_vline(xintercept=c(-log2(1.5),log2(1.5)), color="red")+ 
+            geom_hline(yintercept=-log10(0.05), color="blue")+ 
+            geom_point(color="black",alpha=0.5,stat="identity")+
+            xlim(-10,10)
+    })
+    
+    output$rna_volcano <- renderPlot({
+        rna_volcano_plot()
+    })
+        
+    
+    
     ######################### obersever #################################
+    
     observeEvent(input$renderimport_rna, {
         if (is.null(rnaseq_df()) | is.null(rnameta_df())){return()}
         updateSelectInput(session, "rnaseq_genecol", "Select the gene column", choices=colnames(rnaseq_df()))
@@ -351,38 +488,22 @@ server <- function(input, output, session) {
         if(is.null(rnaseq_df())){return()}
         
         updateSelectInput(session, "rna_meta_var1", "Select group column", choices=colnames(rnameta_df()))
-        updateSelectInput(session, "rna_meta_var2", "Select group column", choices=colnames(rnameta_df()))
+        updateSelectizeInput(session, "rna_meta_var2", "Select group column", choices=colnames(rnameta_df()))
         updateCheckboxGroupInput(session, "rna_samples", "Select samples for analysis", choices=colnames(rnaseq_df()), selected=colnames(rnaseq_df()))
     })
     
-    
-    output$check <- renderPrint({input$run_pca_rna})
-    output$deseq2_panel <- renderUI({
-        input$rna_pca_rna
-        fluidRow(
-            id="deseq2_panel",
-            box(
-                withSpinner(
-                    plotlyOutput("rna_pca"),
-                    type=4
-                ),
-                width=6
-            ), 
-            box(
-                withSpinner(
-                    plotOutput("rna_heatmap"),
-                    type=4
-                ),
-                width=6
-            )
-        )
-        # fluidRow(
-        #     id="deseq2_panel",
-        #     box(
-        #         verbatimTextOutput("check_meta")
-        #     )
-        # )
+    ## gene selection
+    observeEvent(input$rnaseq_genecol,{
+        req(input$rnaseq_genecol)
+        seqdf <- rnaseq_df()
+        updateSelectizeInput(session, "gene_name", "Select gene", choices=seqdf[,input$rnaseq_genecol], server = TRUE)
     })
+    
+    observeEvent(input$run_pca_rna, {
+        dds <- dds_obj()
+        updateSelectInput(session, "deseq_result", "Choose a comparison", choices=resultsNames(dds))
+    })
+
     
     output$rna_pca <- renderPlotly({
         rnapcaplot()
