@@ -11,7 +11,6 @@ library(RColorBrewer)
 library(pheatmap)
 library(DESeq2)
 library(ggpubr)
-library(shinyBS)
 library(DT)
 
 
@@ -160,7 +159,7 @@ server <- function(input, output, session) {
                         selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
                         selectizeInput("rna_meta_var2", "Select a variable", choices=c()),
                         checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
-                        bsButton("run_pca_rna", "Run DESeq2", icon=icon('chevron-right'))
+                        actionButton("run_pca_rna", "Run DESeq2", icon=icon('chevron-right'))
                     ),
                     width=4
                     
