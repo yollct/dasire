@@ -512,28 +512,28 @@ server <- function(input, output, session) {
     
     #################### dynamic rendering ##########################
     observeEvent("",{
-        show("start_panel")
-        hide("import_panel")
-        hide("rnaseq")
-        hide("deseq2_panel")
+        shinyjs::show("start_panel")
+        shinyjs::hide("import_panel")
+        shinyjs::hide("rnaseq")
+        shinyjs::hide("deseq2_panel")
     }, once=T)
     
     observeEvent(input$tabs,{
         if (input$tabs=="import"){
-            show("import_panel")
-            hide("start_panel")
-            hide("deseq2_panel")
+            shinyjs::show("import_panel")
+            shinyjs::hide("start_panel")
+            shinyjs::hide("deseq2_panel")
         } else if (input$tabs=="start"){
-            show("start_panel")
-            hide("import_panel")
-            hide("deseq2_panel")
+            shinyjs::show("start_panel")
+            shinyjs::hide("import_panel")
+            shinyjs::hide("deseq2_panel")
         } 
     })
     
     observeEvent(input$run_pca_rna,{
-        show("deseq2_panel")
-        hide("start_panel")
-        hide("import_panel")
+        shinyjs::show("deseq2_panel")
+        shinyjs::hide("start_panel")
+        shinyjs::hide("import_panel")
     })
 }
 
