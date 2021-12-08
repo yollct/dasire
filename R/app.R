@@ -12,6 +12,7 @@ library(pheatmap)
 library(DESeq2)
 library(ggpubr)
 library(shinyBS)
+library(DT)
 
 
 options(shiny.maxRequestSize=30*1024^2)
@@ -49,63 +50,62 @@ ui <- dashboardPage(
                     )
                 )
             )
-        ),
-        tabItem(
-            tabName="import",
-            fluidRow(
-                div(
-                    id="import_panel",
-                    fluidRow(
-                        column(12,
-                               box(
-                                   title="Select your data",
-                                   div(
-                                       checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
-                                       fileInput(
-                                           inputId = "rnaseq_csv",
-                                           label="Choose RNAseq data you want to run.",
-                                           accept = "text/csv"
+            ,
+            tabItem(
+                tabName="import",
+                fluidRow(
+                    div(
+                        id="import_panel",
+                        fluidRow(
+                            column(12,
+                                   box(
+                                       title="Select your data",
+                                       div(
+                                           checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
+                                           fileInput(
+                                               inputId = "rnaseq_csv",
+                                               label="Choose RNAseq data you want to run.",
+                                               accept = "text/csv"
+                                           ),
+                                           checkboxInput("header_rna", "Header", value=TRUE),
+                                           textInput("rnaseq_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
+                                           fileInput(
+                                               inputId = "rnaseq_meta",
+                                               label="Choose meta data for your data.",
+                                               accept="text/csv"
+                                           ),
+                                           checkboxInput("header_rnameta", "Header", value=TRUE),
+                                           textInput("rnaseq_meta_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
                                        ),
-                                       checkboxInput("header_rna", "Header", value=TRUE),
-                                       textInput("rnaseq_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
-                                       fileInput(
-                                           inputId = "rnaseq_meta",
-                                           label="Choose meta data for your data.",
-                                           accept="text/csv"
-                                       ),
-                                       checkboxInput("header_rnameta", "Header", value=TRUE),
-                                       textInput("rnaseq_meta_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
+                                       p("Some bugs here, press upload two times so you can choose sample columns"),
+                                       div(
+                                           actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
+                                       )
                                    ),
-                                   p("Some bugs here, press upload two times so you can choose sample columns"),
-                                   div(
-                                       actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
+                                   box(
+                                       title="Select CHIP-seq data you want to run.",
+                                       div(
+                                           fileInput(inputId = "chipseq_csv", label="Choose your CHIPseq data", accept=".csv"),
+                                           actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
+                                       )
                                    )
-                               ),
-                               box(
-                                   title="Select CHIP-seq data you want to run.",
-                                   div(
-                                       fileInput(inputId = "chipseq_csv", label="Choose your CHIPseq data", accept=".csv"),
-                                       actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
+                            ),
+                            column(12,
+                                   box(
+                                       title="Select annotation",
+                                       div(
+                                           checkboxInput("gtf", "Use GENCODE gtf.", value=TRUE)
+                                       )
                                    )
-                               )
-                        ),
-                        column(12,
-                               box(
-                                   title="Select annotation",
-                                   div(
-                                       checkboxInput("gtf", "Use GENCODE gtf.", value=TRUE)
-                                   )
-                               )
+                            )
                         )
                     )
                 )
-            )
-        ),
-        tabItem(
-            tabName="deseq2",
-            fluidRow(
-                id="deseq2_panel",
+            ),
+            tabItem(
+                tabName="deseq2",
                 uiOutput("deseq2_panels")
+                
             )
         )
     )
@@ -128,12 +128,7 @@ server <- function(input, output, session) {
                      menuItem("Quality control",
                               tabName = "rna_qc"),
                      menuItem("Differential expression",
-                              tabName="deseq2",
-                              h4("Select parameters:"),
-                              selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
-                              selectizeInput("rna_meta_var2", "Select a variable", choices=c()),
-                              checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
-                              bsButton("run_pca_rna", "Run DESeq2", icon=icon('chevron-right'))
+                              tabName="deseq2"
                      ),
                      menuItem("Differential exon"),
                      menuItem("Isoform switch"),
@@ -157,50 +152,75 @@ server <- function(input, output, session) {
                               menuItem("Gene level")))
         )
     })
-    
     output$deseq2_panels <- renderUI({
-        fluidRow(
-            id="deseq2_panel",
-            column(
-                withSpinner(
-                    plotlyOutput("rna_pca"),
-                    type=4
+            fluidRow(
+                column(
+                    box(
+                        h4("Select parameters:"),
+                        selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
+                        selectizeInput("rna_meta_var2", "Select a variable", choices=c()),
+                        checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
+                        bsButton("run_pca_rna", "Run DESeq2", icon=icon('chevron-right'))
+                    ),
+                    width=4
+                    
                 ),
-                div(
-                    selectInput("deseq_result", label = "Result", choices = c()),
-                    withSpinner(
-                        plotOutput("rna_volcano"),
-                        type=4
+                tabBox(
+                    title = "Visualization",
+                    width=8,
+                    tabPanel("PCA",
+                             box(
+                                 withSpinner(
+                                     plotlyOutput("rna_pca"),
+                                     type=4
+                                 )
+                             ),
+                             box(
+                                 withSpinner(
+                                     plotOutput("rna_heatmap"),
+                                     type=4
+                                 )
+                             )
+                             
+                    ),
+                    tabPanel("gene",
+                             box(
+                                 selectizeInput("gene_name", label = "Gene", choices = c()),
+                                 withSpinner(
+                                     plotOutput("rna_genecount"),
+                                     type=4
+                                 )
+                             ),
+                    ),
+                    tabPanel("deseq_res",
+                             box(
+                                 div(
+                                     selectInput("deseq_result", label = "Result", choices = c()),
+                                     withSpinner(
+                                         plotOutput("rna_volcano"),
+                                         type=4
+                                     )
+                                 )
+                             ),
+                             div(
+                                 withSpinner(
+                                     DT::dataTableOutput("rna_deseq_table"),
+                                     type=4
+                                 )
+                             )
                     )
-                ),
-                width=4
-            ),
-            column(
-                div(
-                    selectizeInput("gene_name", label = "Gene", choices = c()),
-                    withSpinner(
-                        plotOutput("rna_genecount"),
-                        type=4
-                    )
-                ),
-                width=4
-            ), 
-            column(
-                withSpinner(
-                    plotOutput("rna_heatmap"),
-                    type=4
-                ),
-                width=4
+                )
             )
-            
-        )
+    })
+    
+    
         # fluidRow(
         #     id="deseq2_panel",
         #     box(
         #         verbatimTextOutput("check_meta")
         #     )
         # )
-    })
+    
     #################### data handler / modal ##########################
     import_data_modal <- function(failed=F){
         if (failed==F){
@@ -330,17 +350,17 @@ server <- function(input, output, session) {
         dds <- DESeq(dds)
         dds 
     })
-    
+    # 
     # dds_result <- reactive({
     #     if (input$ok_deseq_level){
-    #         
+    # 
     #         dds <- dds_obj()
     #         dds[,input$rna_meta_var1] <- relevel(dds[,input$rna_meta_var1], input$rna_deseq_level)
     #         dds <- DESeq(dds)
     #         return(dds)
     #     }
     # })
-    
+
     #####output
     check_meta1 <- reactive({
         if (input$run_pca_rna == 0){return()}
@@ -472,7 +492,16 @@ server <- function(input, output, session) {
         rna_volcano_plot()
     })
         
+    rna_deseq_res_table <- reactive({
+        dds <- dds_obj()
+        req(input$deseq_result)
+        
+        
+        deg <- data.frame(DESeq2::results(dds, name=input$deseq_result))
+        deg
+    })
     
+    output$rna_deseq_table <- DT::renderDataTable({rna_deseq_res_table()})
     
     ######################### obersever #################################
     
@@ -511,30 +540,26 @@ server <- function(input, output, session) {
     
     
     #################### dynamic rendering ##########################
-    observeEvent("",{
-        shinyjs::show("start_panel")
-        shinyjs::hide("import_panel")
-        shinyjs::hide("rnaseq")
-        shinyjs::hide("deseq2_panel")
-    }, once=T)
-    
-    observeEvent(input$tabs,{
-        if (input$tabs=="import"){
-            shinyjs::show("import_panel")
-            shinyjs::hide("start_panel")
-            shinyjs::hide("deseq2_panel")
-        } else if (input$tabs=="start"){
-            shinyjs::show("start_panel")
-            shinyjs::hide("import_panel")
-            shinyjs::hide("deseq2_panel")
-        } 
-    })
-    
-    observeEvent(input$run_pca_rna,{
-        shinyjs::show("deseq2_panel")
-        shinyjs::hide("start_panel")
-        shinyjs::hide("import_panel")
-    })
+    # observeEvent("",{
+    #     shinyjs::show("start_panel")
+    #     shinyjs::hide("import_panel")
+    #     shinyjs::hide("rnaseq")
+    #     shinyjs::hide("deseq2_panel")
+    # }, once=T)
+    # 
+    # observeEvent(input$tabs,{
+    #     if (input$tabs=="import"){
+    #         shinyjs::show("import_panel")
+    #         shinyjs::hide("start_panel")
+    #         shinyjs::hide("deseq2_panel")
+    #     } else if (input$tabs=="start"){
+    #         shinyjs::show("start_panel")
+    #         shinyjs::hide("import_panel")
+    #         shinyjs::hide("deseq2_panel")
+    #     } 
+    # })
+    # 
+
 }
 
 shinyApp(ui, server)
