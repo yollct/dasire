@@ -80,7 +80,6 @@ ui <- dashboardPage(
                                            checkboxInput("header_rnameta", "Header", value=TRUE),
                                            textInput("rnaseq_meta_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
                                        ),
-                                       p("Some bugs here, press upload two times so you can choose sample columns"),
                                        div(
                                            actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
                                        )
