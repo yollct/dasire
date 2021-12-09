@@ -1,7 +1,6 @@
 library(shiny)
 library(shinydashboard)
 library(dashboardthemes)
-library(shinyjs)
 library(tidyverse)
 library(shinycssloaders)
 library(ggplot2)
@@ -42,7 +41,6 @@ ui <- dashboardPage(
         shinyDashboardThemes(
             theme = "blue_gradient"
         ),
-        useShinyjs(),
         tabItems(
             tabItem(
                 tabName = "start",
