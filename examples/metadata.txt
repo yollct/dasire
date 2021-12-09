@@ -1,0 +1,9 @@
+sample_id condition
+ENCFF239POR	control
+ENCFF250AJS	control
+ENCFF301JRH	treated
+ENCFF803NZJ	treated
+#ENCFF573WJT	treated
+#ENCFF193LXU	treated
+#ENCFF319WJN	control
+#ENCFF962DHI	control

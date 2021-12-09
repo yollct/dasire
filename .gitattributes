@@ -1,0 +1,8 @@
+serverside/R/examples/example_data.zip filter=lfs diff=lfs merge=lfs -text
+serverside/R/examples/encode_bedNarrowPeak_files filter=lfs diff=lfs merge=lfs -text
+*.sj filter=lfs diff=lfs merge=lfs -text
+*.majiq filter=lfs diff=lfs merge=lfs -text
+*.sql filter=lfs diff=lfs merge=lfs -text
+*.voila filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
+*.Rdata filter=lfs diff=lfs merge=lfs -text

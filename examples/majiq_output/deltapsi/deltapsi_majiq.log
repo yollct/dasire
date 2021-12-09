@@ -1,0 +1,14 @@
+2021-07-31 02:34:29,649 (PID:47157) - INFO - Majiq deltapsi v2.1-05c9c32
+2021-07-31 02:34:29,649 (PID:47157) - INFO - Command: /nfs/home/users/msalgado/.conda/envs/majiq/bin/majiq deltapsi -o /nfs/home/users/msalgado/splicing/analysis_all_final/K562_YBX1_DOWN_ENCODE/majiq_output/deltapsi -grp1 majiq_output/build/ENCFF239POR.Aligned.sortedByCoord.out.majiq majiq_output/build/ENCFF250AJS.Aligned.sortedByCoord.out.majiq -grp2 majiq_output/build/ENCFF301JRH.Aligned.sortedByCoord.out.majiq majiq_output/build/ENCFF803NZJ.Aligned.sortedByCoord.out.majiq -n CONTROL BORIS
+2021-07-31 02:34:29,649 (PID:47157) - INFO - GROUP1: ['majiq_output/build/ENCFF239POR.Aligned.sortedByCoord.out.majiq', 'majiq_output/build/ENCFF250AJS.Aligned.sortedByCoord.out.majiq']
+2021-07-31 02:34:29,649 (PID:47157) - INFO - GROUP2: ['majiq_output/build/ENCFF301JRH.Aligned.sortedByCoord.out.majiq', 'majiq_output/build/ENCFF803NZJ.Aligned.sortedByCoord.out.majiq']
+2021-07-31 02:34:29,649 (PID:47157) - INFO - Parsing file: majiq_output/build/ENCFF239POR.Aligned.sortedByCoord.out.majiq
+2021-07-31 02:34:31,827 (PID:47157) - INFO - Parsing file: majiq_output/build/ENCFF250AJS.Aligned.sortedByCoord.out.majiq
+2021-07-31 02:34:34,810 (PID:47157) - INFO - Group CONTROL: 78064 LSVs
+2021-07-31 02:34:34,810 (PID:47157) - INFO - Parsing file: majiq_output/build/ENCFF301JRH.Aligned.sortedByCoord.out.majiq
+2021-07-31 02:34:36,941 (PID:47157) - INFO - Parsing file: majiq_output/build/ENCFF803NZJ.Aligned.sortedByCoord.out.majiq
+2021-07-31 02:34:40,028 (PID:47157) - INFO - Group BORIS: 78064 LSVs
+2021-07-31 02:34:40,055 (PID:47157) - INFO - Number quantifiable LSVs: 77006
+2021-07-31 02:34:40,056 (PID:47157) - INFO - Calculating prior matrix...
+2021-07-31 02:37:04,795 (PID:47157) - INFO - Computation done, saving results....
+2021-07-31 02:39:59,627 (PID:47157) - INFO - DeltaPSI calculation for CONTROL_BORIS ended successfully! Result can be found at /nfs/home/users/msalgado/splicing/analysis_all_final/K562_YBX1_DOWN_ENCODE/majiq_output/deltapsi

@@ -1,0 +1,37 @@
+2021-07-31 02:27:00,835 (PID:45619) - INFO - Majiq Build v2.1-05c9c32
+2021-07-31 02:27:00,836 (PID:45619) - INFO - Command: /nfs/home/users/msalgado/.conda/envs/majiq/bin/majiq build -o /nfs/home/users/msalgado/splicing/analysis_all_final/K562_YBX1_DOWN_ENCODE/majiq_output/build -c /nfs/home/users/msalgado/splicing/analysis_all_final/K562_YBX1_DOWN_ENCODE/majiq_output/majiq_build_config.ini /nfs/home/users/msalgado/splicing/annotation_files/gencode.v36.annotation.gff3
+2021-07-31 02:27:00,836 (PID:45619) - INFO - Parsing GFF3
+2021-07-31 02:27:59,100 (PID:45619) - INFO - Reading bamfiles
+2021-07-31 02:27:59,109 (PID:45619) - INFO - Group control, number of experiments: 2, minexperiments: 1
+2021-07-31 02:27:59,110 (PID:45619) - INFO - Reading bam file ENCFF239POR.Aligned.sortedByCoord.out
+2021-07-31 02:28:24,439 (PID:45619) - INFO - Detect Intron retention ENCFF239POR.Aligned.sortedByCoord.out
+2021-07-31 02:28:54,724 (PID:45619) - INFO - Done Reading file ENCFF239POR.Aligned.sortedByCoord.out
+2021-07-31 02:28:55,712 (PID:45619) - INFO - Reading bam file ENCFF250AJS.Aligned.sortedByCoord.out
+2021-07-31 02:29:28,076 (PID:45619) - INFO - Detect Intron retention ENCFF250AJS.Aligned.sortedByCoord.out
+2021-07-31 02:30:06,074 (PID:45619) - INFO - Done Reading file ENCFF250AJS.Aligned.sortedByCoord.out
+2021-07-31 02:30:07,054 (PID:45619) - INFO - Group boris, number of experiments: 2, minexperiments: 1
+2021-07-31 02:30:07,056 (PID:45619) - INFO - Reading bam file ENCFF301JRH.Aligned.sortedByCoord.out
+2021-07-31 02:30:40,735 (PID:45619) - INFO - Detect Intron retention ENCFF301JRH.Aligned.sortedByCoord.out
+2021-07-31 02:31:19,757 (PID:45619) - INFO - Done Reading file ENCFF301JRH.Aligned.sortedByCoord.out
+2021-07-31 02:31:21,144 (PID:45619) - INFO - Reading bam file ENCFF803NZJ.Aligned.sortedByCoord.out
+2021-07-31 02:31:54,715 (PID:45619) - INFO - Detect Intron retention ENCFF803NZJ.Aligned.sortedByCoord.out
+2021-07-31 02:32:35,469 (PID:45619) - INFO - Done Reading file ENCFF803NZJ.Aligned.sortedByCoord.out
+2021-07-31 02:32:36,706 (PID:45619) - INFO - Detecting LSVs ngenes: 60660 
+2021-07-31 02:32:53,354 (PID:45619) - INFO - 96344 LSV found
+2021-07-31 02:32:53,413 (PID:45619) - INFO - DUMP file b'ENCFF239POR.Aligned.sortedByCoord.out'
+2021-07-31 02:32:59,834 (PID:45619) - INFO - Create majiq file
+2021-07-31 02:33:02,393 (PID:45619) - INFO - Dump majiq file
+2021-07-31 02:33:04,014 (PID:45619) - INFO - ENCFF239POR.Aligned.sortedByCoord.out: 95978 LSVs
+2021-07-31 02:33:04,103 (PID:45619) - INFO - DUMP file b'ENCFF250AJS.Aligned.sortedByCoord.out'
+2021-07-31 02:33:15,077 (PID:45619) - INFO - Create majiq file
+2021-07-31 02:33:17,567 (PID:45619) - INFO - Dump majiq file
+2021-07-31 02:33:19,197 (PID:45619) - INFO - ENCFF250AJS.Aligned.sortedByCoord.out: 95978 LSVs
+2021-07-31 02:33:19,292 (PID:45619) - INFO - DUMP file b'ENCFF301JRH.Aligned.sortedByCoord.out'
+2021-07-31 02:33:29,878 (PID:45619) - INFO - Create majiq file
+2021-07-31 02:33:32,388 (PID:45619) - INFO - Dump majiq file
+2021-07-31 02:33:33,983 (PID:45619) - INFO - ENCFF301JRH.Aligned.sortedByCoord.out: 95978 LSVs
+2021-07-31 02:33:34,072 (PID:45619) - INFO - DUMP file b'ENCFF803NZJ.Aligned.sortedByCoord.out'
+2021-07-31 02:33:45,262 (PID:45619) - INFO - Create majiq file
+2021-07-31 02:33:47,669 (PID:45619) - INFO - Dump majiq file
+2021-07-31 02:33:49,294 (PID:45619) - INFO - ENCFF803NZJ.Aligned.sortedByCoord.out: 95978 LSVs
+2021-07-31 02:33:50,595 (PID:45619) - INFO - MAJIQ Builder is ended successfully!
