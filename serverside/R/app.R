@@ -1219,7 +1219,9 @@ server <- function(input, output, session) {
     output$kallisto_percentplot <- renderPlot({pseudo_qc_plot()})
     
     #################### download handler #########################
-    
+    download_handler <- function(plotname, formatdd) {
+        
+    }
     #################### dynamic rendering ##########################
     # observeEvent("",{
     #     shinyjs::show("start_panel")
