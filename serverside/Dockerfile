@@ -12,7 +12,6 @@ RUN R -e "install.packages(c(\"shinydashboard\", \"dashboardthemes\",\"shinyjs\"
 
 RUN wget https://raw.githubusercontent.com/rocker-org/shiny/master/shiny-server.sh -O /usr/bin/shiny-server.sh; chmod +x /usr/bin/shiny-server.sh
 
-COPY R/ /srv/shiny-server/
 
 EXPOSE 3838
 CMD ["/usr/bin/shiny-server.sh"]
