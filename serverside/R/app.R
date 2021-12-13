@@ -17,7 +17,7 @@ library(viridis)
 library(IsoformSwitchAnalyzeR)
 library(DEXSeq)
 library(ComplexHeatmap)
-library("shinyWidgets")
+library(shinyWidgets)
 source("global.R")
 `%notin%` <- Negate(`%in%`)
 
