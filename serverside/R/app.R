@@ -17,9 +17,11 @@ library(viridis)
 library(IsoformSwitchAnalyzeR)
 library(DEXSeq)
 library(ComplexHeatmap)
+library("shinyWidgets")
+source("global.R")
 `%notin%` <- Negate(`%in%`)
 
-options(shiny.maxRequestSize=30*1024^2)
+options(shiny.maxRequestSize=30*1024^2, shiny.trace = TRUE, shiny.reactlog=TRUE)
 
 ui <- dashboardPage(
     dashboardHeader(title="DASiRe"),
@@ -191,11 +193,31 @@ server <- function(input, output, session) {
                              box(
                                  withSpinner(
                                      plotlyOutput("rna_pca"), type=4
+                                 ),
+                                 div(
+                                     style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                     dropdown(
+                                         selectInput(inputId="deseq2_pca_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "deseq2_pca_down", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE
+                                     )
                                  )
                              ),
                              box(
                                  withSpinner(
                                      plotOutput("rna_heatmap"), type=4
+                                 ),
+                                 div(
+                                     style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                     dropdown(
+                                         selectInput(inputId="deseq2_hm_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "deseq2_hm_down", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE
+                                     )
                                  )
                              )
                              
@@ -205,6 +227,16 @@ server <- function(input, output, session) {
                                  selectizeInput("gene_name", label = "Gene", choices = c()),
                                  withSpinner(
                                      plotOutput("rna_genecount"), type=4
+                                 ),
+                                 div(
+                                     style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                     dropdown(
+                                         selectInput(inputId="deseq2_gc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "deseq2_gc_down", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE
+                                     )
                                  )
                              ),
                     ),
@@ -215,12 +247,23 @@ server <- function(input, output, session) {
                                      withSpinner(
                                          plotOutput("rna_volcano"), type=4
                                      )
+                                 ),
+                                 div(
+                                     style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                     dropdown(
+                                         selectInput(inputId="deseq2_vc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "deseq2_vc_down", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE
+                                     )
                                  )
                              ),
                              div(
                                  withSpinner(
                                      DT::dataTableOutput("rna_deseq_table"), type=4
                                  )
+                                 
                              )
                     )
                 )
@@ -240,15 +283,51 @@ server <- function(input, output, session) {
                 width=10,
                 tabPanel("STAR output",
                          box(
-                            plotOutput("star_qc_percentplot")
+                             withSpinner(
+                                    plotOutput("star_qc_percentplot"), type=4
+                            ),
+                            div(
+                                style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                dropdown(
+                                    selectInput(inputId="star_pp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                    downloadButton(outputId = "star_pp_down", label = "DOWNLOAD"),
+                                    size = "xs",
+                                    icon = icon("download", class = "opt"), 
+                                    up = TRUE
+                                )
+                            )
                         ),
                         box(
-                            plotOutput("star_qc_readlenplot")
+                            withSpinner(
+                                plotOutput("star_qc_readlenplot"), type=4
+                            ), 
+                            div(
+                                style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                dropdown(
+                                    selectInput(inputId="star_rp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                    downloadButton(outputId = "star_rp_down", label = "DOWNLOAD"),
+                                    size = "xs",
+                                    icon = icon("download", class = "opt"), 
+                                    up = TRUE
+                                )
+                            )
                         )
                 ),
                 tabPanel("Kallisto",
                          box(
-                             plotOutput("kallisto_percentplot")
+                             withSpinner(
+                                plotOutput("kallisto_percentplot"), type=4
+                             ), 
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="kall_pp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "kall_pp_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
                         )
                 )
             )
@@ -342,10 +421,14 @@ server <- function(input, output, session) {
                 title="Splicing events",
                 tabPanel("Number of events",
                          box(
-                            plotOutput("event_sum")
+                             withSpinner(
+                                plotOutput("event_sum"),type=4
+                             )
                          ),
                          box(
-                             plotOutput("majiq_heatmap")
+                             withSpinner(
+                                plotOutput("majiq_heatmap"), type=4
+                             )
                          )
                 )
             )
@@ -361,6 +444,8 @@ server <- function(input, output, session) {
     
     #################### data handler / modal ##########################
     import_data_modal <- function(failed=F){
+        cat(file=stderr(), getwd(),"\n")
+        cat(file=stderr(), "liiiii", list.files(getwd()), "\n")
         if (failed==F){
             if (input$useexamples == TRUE){
                 modalDialog(
@@ -421,7 +506,7 @@ server <- function(input, output, session) {
     rnaseq_df <- reactive({
         rnafile <- input$rnaseq_csv
         if (input$useexamples == TRUE){
-            df <- make_gene_matrix("../examples/gene_counts")
+            df <- make_gene_matrix("examples/gene_counts")
         } else {
             if (is.null(rnafile)) {
                 showModal(import_data_modal(failed = TRUE))
@@ -439,7 +524,7 @@ server <- function(input, output, session) {
         metafile <- input$rnaseq_meta
  
         if (input$useexamples  == TRUE){
-            df <- read.csv("../examples/metadata.txt", sep=" ", header=T)
+            df <- read.csv("examples/metadata.txt", sep=" ", header=T)
         } else {
             if (is.null(metafile)){
                 showModal(import_data_modal(failed = TRUE))
@@ -476,7 +561,7 @@ server <- function(input, output, session) {
     #### TODO add covariates
     dds_obj <- reactive({
         if (input$useexamples == TRUE){
-            load(file = "../examples/gene_counts/dds.RData")
+            load(file = "examples/gene_counts/dds.RData")
         } else {
             seqdf <- rnaseq_df_clean()
             metadf <- filtered_meta()
@@ -641,7 +726,7 @@ server <- function(input, output, session) {
     
     isoform_data <- reactive({
         if (input$useexamples == TRUE){
-            load(file = "../examples/pseudocounts/exampleSwitchListAnalyzed.RData")
+            load(file = "examples/pseudocounts/exampleSwitchListAnalyzed.RData")
             datatable(extractSwitchSummary(exampleSwitchListAnalyzed))
         }
         return(exampleSwitchListAnalyzed)
@@ -661,6 +746,7 @@ server <- function(input, output, session) {
     })
     
     switch_plotplot <- eventReactive(input$load_iso, {
+        if (input$load_iso==0){return()}
         req(input$iso_gene_name)
         exampleSwitchListAnalyzed <- isoform_data()
         isa_genes <- isoform_sig_genes()
@@ -671,6 +757,7 @@ server <- function(input, output, session) {
     })
     
     iso_switch_sumplot <- eventReactive(input$load_iso, {
+        if (input$load_iso==0){return()}
         exampleSwitchListAnalyzed <- isoform_data()
         
         extractSplicingSummary(
@@ -694,7 +781,7 @@ server <- function(input, output, session) {
     
     exon_data <- reactive({
         if (input$useexamples==TRUE){
-            load(file = "../examples/exon_counts/dxr1.RData")
+            load(file = "examples/exon_counts/dxr1.RData")
         }
         return(dxr1)
     })
@@ -741,7 +828,7 @@ server <- function(input, output, session) {
     exons_per_gene_plot <- eventReactive(input$exon_gene_name, {
         if (is.null(exon_data())){return()}
         dxr1 <- exon_data()
-        plotDEXSeq(dxr1, gene=input$gene_name, legend=TRUE, cex.axis=1.2, cex=1.3, lwd=2 )
+        plotDEXSeq(dxr1, gene=input$exon_gene_name, legend=TRUE, cex.axis=1.2, cex=1.3, lwd=2 )
     })
     
     output$exons_per_gene <- renderPlot({exons_per_gene_plot()})
@@ -754,14 +841,14 @@ server <- function(input, output, session) {
     
     voila_res_all <- reactive({
         if (input$useeamples==TRUE){
-            df<-read.delim(file = "../examples/majiq_output/voila_results_all.tsv",header = TRUE,sep = "\t")
+            df<-read.delim(file = "examples/majiq_output/voila_results_all.tsv",header = TRUE,sep = "\t")
         }
         return(df)
     })
     
     voila_res <- reactive({
         if(input$useexamples==TRUE){
-            df <- read.delim(file = "../examples/majiq_output/voila_results.tsv",header = TRUE,sep = "\t")
+            df <- read.delim(file = "examples/majiq_output/voila_results.tsv",header = TRUE,sep = "\t")
         } 
         return(df)
     })
@@ -1038,7 +1125,7 @@ server <- function(input, output, session) {
     # star qc
     star_qc <- reactive({
         if (input$useexamples == TRUE){
-            alignment_stats_star <- read.table(file = "../examples/multiqc_data/multiqc_star.txt",header = TRUE,sep = "\t")
+            alignment_stats_star <- read.table(file = "examples/multiqc_data/multiqc_star.txt",header = TRUE,sep = "\t")
             alignment_stats_star <- melt(data = alignment_stats_star,id.vars="Sample")#,"total_reads","avg_input_read_length"))
         }
         return(alignment_stats_star)
@@ -1100,7 +1187,7 @@ server <- function(input, output, session) {
     
     pseudo_qc <- eventReactive(input$load_qc, {
         if (input$useexamples == TRUE){
-            alignment_stats_kallisto <- read.csv("../examples/multiqc_data/multiqc_kallisto.txt",header = TRUE,sep = "\t")
+            alignment_stats_kallisto <- read.csv("examples/multiqc_data/multiqc_kallisto.txt",header = TRUE,sep = "\t")
             alignment_stats_kallisto <- melt(data = alignment_stats_kallisto,id.vars="Sample")#,"total_reads","avg_input_read_length"))
         }
         
@@ -1130,6 +1217,8 @@ server <- function(input, output, session) {
     })
     
     output$kallisto_percentplot <- renderPlot({pseudo_qc_plot()})
+    
+    #################### download handler #########################
     
     #################### dynamic rendering ##########################
     # observeEvent("",{
