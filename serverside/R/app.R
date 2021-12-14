@@ -24,8 +24,9 @@ source("global.R")
 options(shiny.maxRequestSize=30*1024^2, shiny.trace = TRUE, shiny.reactlog=TRUE)
 
 ui <- dashboardPage(
-    dashboardHeader(title="DASiRe"),
+    dashboardHeader(title="DASiRe", titleWidth = 300),
     dashboardSidebar(
+        width = 300,
         sidebarMenu(
             id="tabs",
             menuItem("Start", 
@@ -188,7 +189,8 @@ server <- function(input, output, session) {
                 ),
                 tabBox(
                     title = "Visualization",
-                    width=8,
+                    width=7,
+                    height=8,
                     tabPanel("PCA",
                              box(
                                  withSpinner(
@@ -280,7 +282,8 @@ server <- function(input, output, session) {
             ),
             tabBox(
                 id="Quality control",
-                width=10,
+                width=8.5,
+                height=8,
                 tabPanel("STAR output",
                          box(
                              withSpinner(
@@ -315,6 +318,7 @@ server <- function(input, output, session) {
                 ),
                 tabPanel("Kallisto",
                          box(
+                             width=4,
                              withSpinner(
                                 plotOutput("kallisto_percentplot"), type=4
                              ), 
@@ -344,7 +348,8 @@ server <- function(input, output, session) {
             ),
             tabBox(
                 id="Isoform switch analysis",
-                width=9,
+                width=8.1,
+                height=8,
                 tabPanel("Switch summary",
                          box(
                              plotOutput("switch_sum")
@@ -354,7 +359,11 @@ server <- function(input, output, session) {
                          withSpinner(
                             plotOutput("switch_plot"), type=4
                          )
-                )
+                ),
+                tabPanel("Switch table",
+                         withSpinner(
+                             DT::dataTableOutput("switch_table")
+                         ))
             )
         )
     })
@@ -372,7 +381,8 @@ server <- function(input, output, session) {
             ),
             tabBox(
                 title="DEXSeq",
-                width=8,
+                width=7,
+                height=8,
                 tabPanel("Summary of DEXSeq",
                          fluidRow(
                              box(
@@ -404,6 +414,13 @@ server <- function(input, output, session) {
                                  )
                              )
                          )
+                ),
+                tabPanel("DEXSeq table",
+                       box(
+                           withSpinner(
+                               DT::dataTableOutput("exons_table"), type=4
+                           )
+                       )
                 )
             )
         )
@@ -419,6 +436,8 @@ server <- function(input, output, session) {
             ),
             tabBox(
                 title="Splicing events",
+                height=8,
+                width=8,
                 tabPanel("Number of events",
                          box(
                              withSpinner(
@@ -777,6 +796,12 @@ server <- function(input, output, session) {
         switch_plotplot()
     })
     
+    switch_table_tb <- reactive({
+        df <- isoform_sig_genes()
+        return(df)
+    })
+    
+    output$switch_table <- renderDataTable({switch_table_tb()})
     ######################### DEXSeq ################################
     
     exon_data <- reactive({
@@ -796,6 +821,13 @@ server <- function(input, output, session) {
         return(significant_exons)
 
     })
+    
+    exons_table_tb <- reactive({
+        dxr1 <- exon_data()
+        return(data.frame(dxr1) %>% na.omit())
+    })
+    
+    output$exons_table <- renderDataTable({exons_table_tb()})
 
    observeEvent(input$load_exon, {
         if (is.null(exon_data())){return()}
@@ -977,8 +1009,6 @@ server <- function(input, output, session) {
     
     ##more than one event 
     majiq.moreThanOneEvent.pos <- reactive({
-        
-        
         df <- voila_res()
         majiq.es.pos.df <- majiq.es.pos()
         majiq.a3.pos.df <- majiq.a3.pos()
