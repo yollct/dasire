@@ -24,4 +24,14 @@ make_gene_matrix <- function(dir){
 }
 
 
+# we want to use CHIP experiments of known splicing factors from encode to show as references in the plots.
+
+# Import splicing factors list 
+sf_list <- read.table(file = "examples/databases/splicing_factors_list.txt",header = T,sep = "\t",fill = TRUE)
+
+# import reference ENCODE datasets 
+ENCODE_metadata <- read.table("examples/databases/encode_bedNarrowPeak_files/metadata.tsv",sep="\t",header = TRUE)
+
+
+
 

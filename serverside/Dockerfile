@@ -6,9 +6,9 @@ RUN apt-get update && apt-get --no-install-recommends --fix-broken install -y cu
 
 RUN wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 && unar htslib-1.10.2.tar.bz2 && cd htslib-1.10.2/ &&  ./configure --prefix=/usr/ && make && make install && cd ..  && rm htslib*.bz2
 
-RUN R -e "BiocManager::install(c(\"Rsamtools\",\"Rsubread\", \"DEXSeq\", \"DESeq2\", \"IsoformSwitchAnalyzeR\", \"biomaRt\", \"ComplexHeatmap\", \"DT\", \"ggpubr\",\"pheatmap\", \"plotly\", \"reshape2\", \"VennDiagram\", \"viridis\")) " 
+RUN R -e "BiocManager::install(c(\"Rsamtools\",\"Rsubread\", \"DEXSeq\", \"DESeq2\", \"IsoformSwitchAnalyzeR\", \"biomaRt\", \"ComplexHeatmap\", \"DT\", \"ggpubr\",\"pheatmap\", \"plotly\", \"reshape2\", \"VennDiagram\", \"viridis\",\"GenomicRanges\", \"rtracklayer\" ,\"IRanges\",\"genomation\",\"ChIPseeker\",\"EnsDb.Hsapiens.v86\", \"org.Hs.eg.db\", \"GenomicFeatures\", \"biomaRt\", \"Gviz\", \"ChIPpeakAnno\"" 
 
-RUN R -e "install.packages(c(\"shinydashboard\", \"dashboardthemes\",\"shinyjs\",\"shinycssloaders\",\"shinyWidgets\",\"plyr\"))"
+RUN R -e "install.packages(c(\"shinydashboard\", \"dashboardthemes\",\"shinyjs\",\"shinycssloaders\",\"shinyWidgets\",\"plyr\",\"RMariaDB\"))"
 
 RUN wget https://raw.githubusercontent.com/rocker-org/shiny/master/shiny-server.sh -O /usr/bin/shiny-server.sh; chmod +x /usr/bin/shiny-server.sh
 

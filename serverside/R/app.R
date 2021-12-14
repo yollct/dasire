@@ -18,6 +18,20 @@ library(IsoformSwitchAnalyzeR)
 library(DEXSeq)
 library(ComplexHeatmap)
 library(shinyWidgets)
+library(GenomicRanges)
+library(rtracklayer)
+library(IRanges)
+library(genomation)
+library(ChIPseeker)
+library(EnsDb.Hsapiens.v86)
+library(org.Hs.eg.db)
+library(GenomicFeatures)
+library(RMariaDB)
+library(biomaRt)
+library(Gviz)
+library(ChIPpeakAnno)
+
+
 source("global.R")
 `%notin%` <- Negate(`%in%`)
 
@@ -90,7 +104,8 @@ ui <- dashboardPage(
                                    box(
                                        title="Select CHIP-seq data you want to run.",
                                        div(
-                                           fileInput(inputId = "chipseq_csv", label="Choose your CHIPseq data", accept=".csv"),
+                                           checkboxInput(inputId="useexamples_chip", label="Use example data", value=TRUE),
+                                           fileInput(inputId = "chipseq_bed", label="Choose your CHIPseq bed file"),
                                            actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
                                        )
                                    )
@@ -126,6 +141,10 @@ ui <- dashboardPage(
             tabItem(
                 tabName="rna_splice",
                 uiOutput("rna_splice_panels")
+            ),
+            tabItem(
+                tabName="chip_qc",
+                uiOutput("chip_qc_panels")
             )
         )
     )
@@ -168,7 +187,8 @@ server <- function(input, output, session) {
             menuItem("CHIP-seq",
                      tabName="chipseq",
                      icon=icon("dna"),
-                     menuItem("Quality control"),
+                     menuItem("Quality control",
+                              tabName="chip_qc"),
                      menuItem("Peak enrichment",
                               menuItem("Promoter level"),
                               menuItem("Gene level")))
@@ -452,6 +472,34 @@ server <- function(input, output, session) {
                 )
             )
             
+        )
+    })
+    
+    output$chip_qc_panels <- renderUI({
+        fluidRow(
+            tabBox(
+                title="CHIP-Seq ENCODE",
+                tabPanel("ENCODE table",
+                    column(
+                        width=3,
+                        selectInput("fileassembly", label="Choose an assembly version", choices=c()),
+                        selectInput("biosample", label="Choose a sample", choices=c())
+                    ),
+                    withSpinner(
+                        DT::dataTableOutput("encode_table")
+                    )
+                ),
+                tabPanel("Vis peaks",
+                         withSpinner(
+                             plotOutput("bedpeaks")
+                         )
+                ),
+                tabPanel("Gene track",
+                         selectizeInput("gene_to_display", label="", choices=c()),
+                         withSpinner(
+                             plotOutput("chipgenetrack")
+                         ))
+            )
         )
     })
         # fluidRow(
@@ -1247,6 +1295,163 @@ server <- function(input, output, session) {
     })
     
     output$kallisto_percentplot <- renderPlot({pseudo_qc_plot()})
+    
+    #################### chip quality control ####################
+
+    filter_encode_meta <- reactive({
+        req(input$fileassembly)
+        req(input$biosample)
+        encode_meta <- ENCODE_metadata %>%
+            dplyr::filter(File.assembly==input$fileassembly) %>%
+            dplyr::filter(Output.type %in% c("optimal IDR thresholded peaks")) %>%
+            dplyr::filter(Biosample.term.name==input$biosample) %>% # Maybe this can be also selected by the user
+            dplyr::select(File.accession,Assay,Biosample.term.name,Experiment.target)
+        encode_meta$Experiment.target <- gsub(pattern = "-human",replacement = "",x = encode_meta$Experiment.target)
+        encode_meta <- encode_meta %>%
+            mutate(Assay = if_else(Experiment.target %in% c(sf_list$Gene,"TARDBP","RBM25","RBFOX2","PTBP1","KHSRP","FUS","SF1","CELF1") | grepl(pattern = "HNRNP",x = Experiment.target),
+                                   true = "Splicing Factor",
+                                   false = Assay))
+        input_chips <- encode_meta %>%
+            dplyr::filter(Assay == "Splicing Factor")
+        
+        
+        return(input_chips)
+        
+    })
+    
+    observe({
+        if (input$tabs=="chip_qc") {
+            updateSelectInput(session, "fileassembly", "Select an assembly version", choices=unique(ENCODE_metadata$File.assembly))
+        }
+    })
+    
+    observeEvent(input$fileassembly, {
+        fas_meta <- ENCODE_metadata %>% dplyr::filter(File.assembly==input$fileassembly) 
+        updateSelectInput(session, "biosample", "Select a sample", choices=unique(fas_meta$Biosample.term.name))
+    })
+    
+    output$encode_table <- renderDataTable({
+        filter_encode_meta()
+    })
+    
+    chip_name <- reactive({
+        if (input$useexamples_chip==TRUE){
+            user_chip_name <- "YBX1"
+        } else {
+            user_chip_name <- input$chipseq_name
+        }
+        return(user_chip_name)
+    })
+    
+    allchips_obj <- reactive({
+        if (input$useexamples_chip==TRUE){
+            user_chip_file  <- "examples/databases/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz"
+            
+        } else {
+            user_chip_file <- input$chipseq_bed
+        }
+        
+        user_chip_name <- chip_name()
+        input_chips <- filter_encode_meta()
+        all.chips <- c()
+        for (accession in 1:nrow(input_chips)) {
+            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("examples/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
+        }
+        
+        all.chips[[user_chip_name]] <- IRanges::reduce(readPeakFile(peakfile = user_chip_file),)
+        
+        for (chip in 1:length(all.chips)){
+            all.chips[[chip]]@seqnames <- gsub(pattern = "chr",replacement = "",x = all.chips[[chip]]@seqnames)
+        }
+        
+    })
+    
+    txdb_gff <- reactive({
+        if (input$gtf ==TRUE) {
+            txdb_object <- makeTxDbFromGFF(file = "examples/databases/gencode_annotation_files/gencode.v36.annotation.gtf",format = "gtf")
+            return(txdb_object)
+        }
+    })
+    
+    df_peakanno_edb <- reactive({
+        allchips <- allchips_obj()
+        txdb_object <- txdb_gff()
+        peakAnno.edb <- c()
+        df_peakAnno.edb <- c()
+        
+        for (i in 1:length(all.chips)){
+            peakAnno.edb[[names(all.chips)[i]]] <- assignChromosomeRegion(all.chips[[i]], nucleotideLevel=FALSE,
+                                                                          TxDb=txdb_object)
+            data_tmp <- as.data.frame(peakAnno.edb[[i]]$percentage) %>%  mutate(dataset=names(all.chips)[i])
+            df_peakAnno.edb <- as.data.frame(rbind(df_peakAnno.edb,data_tmp))
+        }
+        
+        df_peakAnno.edb$subjectHits <- gsub(pattern = "fiveUTRs",replacement = "5'UTR",x = df_peakAnno.edb$subjectHits)
+        df_peakAnno.edb$subjectHits <- gsub(pattern = "threeUTRs",replacement = "3'UTR",x = df_peakAnno.edb$subjectHits)
+        df_peakAnno.edb$subjectHits <- gsub(pattern = "immediateDownstream",replacement = "Immediate downstream",x = df_peakAnno.edb$subjectHits)
+        df_peakAnno.edb$subjectHits <- gsub(pattern = "Intergenic.Region",replacement = "Intergenic",x = df_peakAnno.edb$subjectHits)
+        return(df_peakAnno.edb)
+    })
+    
+    df_peakanno_plot <- reactive({
+        df_peakAnno.edb <- df_peakanno_edb()
+        df_peakAnno.edb %>%
+            ggplot( aes(fill=subjectHits, y=Freq, x=dataset)) +
+            geom_bar(position="fill", stat="identity",color="black") +
+            coord_flip()
+    })
+    
+    output$bedpeaks <- renderPlot({df_peakanno_plot()})
+    
+    get_mart <- reactive({
+        mart = useMart("ensembl",dataset="hsapiens_gene_ensembl")
+        fm = Gviz:::.getBMFeatureMap()
+        fm["symbol"] = "external_gene_name"
+        
+        bm = BiomartGeneRegionTrack(biomart=mart,
+                                    size=2, name="GENCODE annotation", utr5="red", utr3="red",
+                                    protein_coding="black", col.line=NULL, #cex=7,
+                                    collapseTranscripts="longest",
+                                    featureMap=fm)
+    })
+    
+    mart_export_obj <- reactive({
+        mart_export <- read.table(file = "examples/databases/mart_export.txt",sep = "\t",header = T)
+        mart_export$chromosome_name <- paste0("chr",mart_export$chromosome_name)
+        return(mart_export)
+    })
+    
+    observe({
+        if (input$tabs=="chip_qc"){
+            mart_export <- mart_export_obj()
+            updateSelectizeInput(session, "gene_to_display", label="Select a gene", choices=unique(mart_export$external_gene_name), selected="BTNL10", server=T)
+        }
+    })
+    
+    plot_gene_track <- reactive({
+        AT = GenomeAxisTrack()
+        bm <- get_mart()
+        user_chip_name <- chip_name()
+        mart_export <- mart_export_obj() 
+        
+        TrackUserChip = AnnotationTrack(all.chips[[user_chip_name]], name=user_chip_name, shape='box',fill='blue',size=2,col="blue")
+        
+        plotTracks(c(TrackUserChip, bm, AT),
+                   chromosome = mart_export$chromosome_name[mart_export$external_gene_name==input$gene_to_display],
+                   from=as.numeric(mart_export$start_position[mart_export$external_gene_name==input$gene_to_display][1]),
+                   to=as.numeric(mart_export$end_position[mart_export$external_gene_name==input$gene_to_display][1]),
+                   extend.right = 3000,extend.left = 3000,
+                   transcriptAnnotation="symbol",
+                   window="auto",
+                   cex.title=1, fontsize=8,
+                   type="histogram" )
+        
+    })
+    
+    output$chipgenetrack <- renderPlot({plot_gene_track()})
+    
+    #################### peak enrichment ##########################
+    
     
     #################### download handler #########################
     download_handler <- function(plotname, formatdd) {
