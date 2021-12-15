@@ -46,7 +46,7 @@ ui <- dashboardPage(
             menuItem("Start", 
                      tabName="start", 
                      icon=icon("cat")),
-            menuItem("Import",
+            menuItem("Upload data",
                      tabName = "import",
                      icon=icon('spinner')
             ),
@@ -79,7 +79,7 @@ ui <- dashboardPage(
                         fluidRow(
                             column(12,
                                    box(
-                                       title="Select your data",
+                                       title="Upload sample data",
                                        div(
                                            checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
                                            fileInput(
@@ -102,10 +102,10 @@ ui <- dashboardPage(
                                        )
                                    ),
                                    box(
-                                       title="Select CHIP-seq data you want to run.",
+                                       title="Upload ChIP data",
                                        div(
                                            checkboxInput(inputId="useexamples_chip", label="Use example data", value=TRUE),
-                                           fileInput(inputId = "chipseq_bed", label="Choose your CHIPseq bed file"),
+                                           fileInput(inputId = "chipseq_bed", label="Choose your ChIPseq bed file"),
                                            actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
                                        )
                                    )
@@ -145,6 +145,10 @@ ui <- dashboardPage(
             tabItem(
                 tabName="chip_qc",
                 uiOutput("chip_qc_panels")
+            ),
+            tabItem(
+                tabName = "peak_enr",
+                uiOutput("chip_peak_panels")
             )
         )
     )
@@ -190,8 +194,8 @@ server <- function(input, output, session) {
                      menuItem("Quality control",
                               tabName="chip_qc"),
                      menuItem("Peak enrichment",
-                              menuItem("Promoter level"),
-                              menuItem("Gene level")))
+                              tabName="peak_enr")
+            )
         )
     })
     
@@ -244,7 +248,7 @@ server <- function(input, output, session) {
                              )
                              
                     ),
-                    tabPanel("gene",
+                    tabPanel("Gene Normalized Counts",
                              box(
                                  selectizeInput("gene_name", label = "Gene", choices = c()),
                                  withSpinner(
@@ -304,7 +308,7 @@ server <- function(input, output, session) {
                 id="Quality control",
                 width=8.5,
                 height=8,
-                tabPanel("STAR output",
+                tabPanel("STAR alignment",
                          box(
                              withSpinner(
                                     plotOutput("star_qc_percentplot"), type=4
@@ -336,7 +340,7 @@ server <- function(input, output, session) {
                             )
                         )
                 ),
-                tabPanel("Kallisto",
+                tabPanel("Kallisto pseudoalignment",
                          box(
                              width=4,
                              withSpinner(
@@ -370,17 +374,17 @@ server <- function(input, output, session) {
                 id="Isoform switch analysis",
                 width=8.1,
                 height=8,
-                tabPanel("Switch summary",
+                tabPanel("Genome-wide isoform splicing analysis",
                          box(
                              plotOutput("switch_sum")
                          )),
-                tabPanel("Switch plots",
+                tabPanel("Gene Switch plots",
                          selectInput("iso_gene_name", "Select a gene", choices=c()),
                          withSpinner(
                             plotOutput("switch_plot"), type=4
                          )
                 ),
-                tabPanel("Switch table",
+                tabPanel("Genes Switch table",
                          withSpinner(
                              DT::dataTableOutput("switch_table")
                          ))
@@ -478,7 +482,7 @@ server <- function(input, output, session) {
     output$chip_qc_panels <- renderUI({
         fluidRow(
             tabBox(
-                title="CHIP-Seq ENCODE",
+                title="ChIP-Seq ENCODE",
                 tabPanel("ENCODE table",
                     column(
                         width=3,
@@ -499,6 +503,25 @@ server <- function(input, output, session) {
                          withSpinner(
                              plotOutput("chipgenetrack")
                          ))
+            )
+        )
+    })
+    
+    output$chip_peak_panels <- renderUI({
+        fluidRow(
+            tabBox(
+                title="ChIP-seq peak enrichment",
+                tabPanel("Gene level peak enrichment",
+                         actionButton("chip_enr_refresh", label="Load Analysis"),
+                         withSpinner(
+                             plotOutput("enrichment_plot")
+                         )),
+                tabPanel("Promoter level peak enrichment",
+                         actionButton("chip_proenr_refresh", label="Load Analysis"),
+                         withSpinner(
+                             plotOutput("pro_enrichment_plot")
+                         )
+                )
             )
         )
     })
@@ -920,7 +943,7 @@ server <- function(input, output, session) {
     ################
     
     voila_res_all <- reactive({
-        if (input$useeamples==TRUE){
+        if (input$useexamples==TRUE){
             df<-read.delim(file = "examples/majiq_output/voila_results_all.tsv",header = TRUE,sep = "\t")
         }
         return(df)
@@ -1173,8 +1196,8 @@ server <- function(input, output, session) {
     
     observe({
         if (input$tabs=="deseq2") {
-            updateSelectInput(session, "rna_meta_var1", "Select group column", choices=colnames(rnameta_df()))
-            updateSelectizeInput(session, "rna_meta_var2", "Select group column", choices=colnames(rnameta_df()))
+            updateSelectInput(session, "rna_meta_var1", "Select condition column", choices=colnames(rnameta_df()))
+            updateSelectizeInput(session, "rna_meta_var2", "Select a variable column (if any)", choices=colnames(rnameta_df()))
             updateCheckboxGroupInput(session, "rna_samples", "Select samples for analysis", choices=colnames(rnaseq_df()), selected=colnames(rnaseq_df()))
         } else {
             updateSelectInput(session, "rna_meta_var1", "Select group column", choices="check again lalalal")
@@ -1192,7 +1215,7 @@ server <- function(input, output, session) {
     observeEvent(input$load_deseq2, {
         if (input$load_deseq2==0){return()}
         dds <- dds_obj()
-        updateSelectInput(session, "deseq_result", "Choose a comparison", choices=resultsNames(dds))
+        updateSelectInput(session, "deseq_result", "Choose a comparison", choices=resultsNames(dds)[2:length(resultsNames(dds))])
         updateSelectizeInput(session, "gene_name", "Select gene", choices=row.names(counts(dds)), server = TRUE)
     })
 
@@ -1368,29 +1391,34 @@ server <- function(input, output, session) {
     
     txdb_gff <- reactive({
         if (input$gtf ==TRUE) {
-            txdb_object <- makeTxDbFromGFF(file = "/localscratch/marisol/DASiRe/databases/gencode_annotation_files/gencode.v36.annotation.gtf",format = "gtf")
+            load("examples/peaksregion.RData")
             return(txdb_object)
         }
     })
     
     df_peakanno_edb <- reactive({
-        allchips <- allchips_obj()
-        txdb_object <- txdb_gff()
-        peakAnno.edb <- c()
-        df_peakAnno.edb <- c()
-        
-        for (i in 1:length(all.chips)){
-            peakAnno.edb[[names(all.chips)[i]]] <- assignChromosomeRegion(all.chips[[i]], nucleotideLevel=FALSE,
-                                                                          TxDb=txdb_object)
-            data_tmp <- as.data.frame(peakAnno.edb[[i]]$percentage) %>%  mutate(dataset=names(all.chips)[i])
-            df_peakAnno.edb <- as.data.frame(rbind(df_peakAnno.edb,data_tmp))
+        if (input$useexamples_chip==TRUE){
+            load("examples/peaksregion.RData")
+            return(df_peakAnno.edb)
+        } else {
+            allchips <- allchips_obj()
+            txdb_object <- txdb_gff()
+            peakAnno.edb <- c()
+            df_peakAnno.edb <- c()
+            
+            for (i in 1:length(all.chips)){
+                peakAnno.edb[[names(all.chips)[i]]] <- assignChromosomeRegion(all.chips[[i]], nucleotideLevel=FALSE,
+                                                                              TxDb=txdb_object)
+                data_tmp <- as.data.frame(peakAnno.edb[[i]]$percentage) %>%  mutate(dataset=names(all.chips)[i])
+                df_peakAnno.edb <- as.data.frame(rbind(df_peakAnno.edb,data_tmp))
+            }
+            
+            df_peakAnno.edb$subjectHits <- gsub(pattern = "fiveUTRs",replacement = "5'UTR",x = df_peakAnno.edb$subjectHits)
+            df_peakAnno.edb$subjectHits <- gsub(pattern = "threeUTRs",replacement = "3'UTR",x = df_peakAnno.edb$subjectHits)
+            df_peakAnno.edb$subjectHits <- gsub(pattern = "immediateDownstream",replacement = "Immediate downstream",x = df_peakAnno.edb$subjectHits)
+            df_peakAnno.edb$subjectHits <- gsub(pattern = "Intergenic.Region",replacement = "Intergenic",x = df_peakAnno.edb$subjectHits)
+            return(df_peakAnno.edb)
         }
-        
-        df_peakAnno.edb$subjectHits <- gsub(pattern = "fiveUTRs",replacement = "5'UTR",x = df_peakAnno.edb$subjectHits)
-        df_peakAnno.edb$subjectHits <- gsub(pattern = "threeUTRs",replacement = "3'UTR",x = df_peakAnno.edb$subjectHits)
-        df_peakAnno.edb$subjectHits <- gsub(pattern = "immediateDownstream",replacement = "Immediate downstream",x = df_peakAnno.edb$subjectHits)
-        df_peakAnno.edb$subjectHits <- gsub(pattern = "Intergenic.Region",replacement = "Intergenic",x = df_peakAnno.edb$subjectHits)
-        return(df_peakAnno.edb)
     })
     
     df_peakanno_plot <- reactive({
@@ -1451,12 +1479,294 @@ server <- function(input, output, session) {
     output$chipgenetrack <- renderPlot({plot_gene_track()})
     
     #################### peak enrichment ##########################
-    
-    
-    #################### download handler #########################
-    download_handler <- function(plotname, formatdd) {
+    make_granges_obj <- function(x, tool, type="gene"){
+        ####
+        astool_obj <- x
         
+        mart_export <- mart_export_obj()
+        if (tool=="majiq"){
+            pos_genes_to_select <- unique(astool_obj$X.Gene.Name)
+        } else if (tool=="dexseq_pos"){
+            #### dexseq obj
+            DEXseq_res <- as.data.frame(x)
+            pos_genes_to_select <- gsub(pattern = "\\..*",replacement = "",x = unique(DEXseq_res$groupID[DEXseq_res$padj<0.1]))
+        } else if (tool=="dexseq_neg"){
+            DEXseq_res <- as.data.frame(x)
+            pos_genes_to_select <- gsub(pattern = "\\..*",replacement = "",x = unique(DEXseq_res$groupID[DEXseq_res$padj>0.9]))
+        } else if (tool=="isa_pos") {
+            exampleSwitchListAnalyzed <- x
+            isa_res_pos <- IsoformSwitchAnalyzeR::extractTopSwitches(exampleSwitchListAnalyzed,alpha = 0.05,dIFcutoff = 0.1,n=Inf)
+            pos_genes_to_select <- isa_res_pos$gene_name
+        } else if (tool=="isa_neg") {
+            exampleSwitchListAnalyzed <- x
+            isa_res_neg <- IsoformSwitchAnalyzeR::extractTopSwitches(exampleSwitchListAnalyzed,alpha = 1,dIFcutoff = 0,n=Inf)
+            isa_res.temp <- IsoformSwitchAnalyzeR::extractTopSwitches(exampleSwitchListAnalyzed,alpha = 0.9,dIFcutoff = 0,n=Inf)
+            isa_res_neg <- isa_res_neg %>%
+                dplyr::filter(gene_name %notin% isa_res.temp$gene_name)
+            rm(isa_res.temp)
+            pos_genes_to_select <- isa_res_neg$gene_name
+        }
+        
+        if (tool=="dexseq_pos" | tool=="dexseq_neg"){
+            mart_filt <- mart_export %>%
+                dplyr::filter(ensembl_gene_id %in% pos_genes_to_select)
+        } else {
+            mart_filt <- mart_export %>%
+                dplyr::filter(external_gene_name %in% pos_genes_to_select)
+        }
+        mart_filt <- unique(mart_filt[c("ensembl_gene_id","external_gene_name","start_position","end_position","chromosome_name")])
+        ####
+        if (type=="gene"){
+            this.gene <-   GRanges(seqnames = Rle( mart_filt$chromosome_name),
+                                          ranges = IRanges( start = mart_filt$start_position,
+                                                            end = mart_filt$end_position),
+                                          strand = Rle( rep("*", nrow(mart_filt)) ),
+                                          gene = mart_filt$external_gene_name)
+            return(this.gene)
+        } else if (type=="promoter"){
+            this.promoter <- GRanges(seqnames = Rle( mart_filt$chromosome_name),
+                                            ranges = IRanges( start = mart_filt$start_position -200,
+                                                              end = mart_filt$start_position +200),
+                                            strand = Rle( rep("*", nrow(mart_filt)) ),
+                                            gene = mart_filt$external_gene_name)
+            return(this.promoter)
+        }
     }
+    
+    
+    majiq.gr.es.gene.ob <- reactive({
+        make_granges_obj(majiq.es.pos(), tool="majiq", type="gene")
+    })
+    
+    majiq.gr.es.promoter.ob <- reactive({
+        make_granges_obj(majiq.es.pos(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.es.gene.neg.ob <- reactive({
+        make_granges_obj(majiq.es.neg(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.es.promoter.neg.ob <- reactive({
+        make_granges_obj(majiq.es.neg(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.ir.gene.ob <- reactive({
+        make_granges_obj(majiq.ir.pos(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.ir.promoter.ob <- reactive({
+        make_granges_obj(majiq.ir.pos(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.ir.gene.neg.ob <- reactive({
+        make_granges_obj(majiq.ir.neg(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.ir.promoter.neg.ob <- reactive({
+        make_granges_obj(majiq.ir.neg(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.a5.gene.ob <- reactive({
+        make_granges_obj(majiq.a5.pos(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.a5.promoter.ob <- reactive({
+        make_granges_obj(majiq.a5.pos(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.a5.gene.neg.ob <- reactive({
+        make_granges_obj(majiq.a5.neg(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.a5.promoter.neg.ob <- reactive({
+        make_granges_obj(majiq.a5.neg(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.a3.gene.ob <- reactive({
+        make_granges_obj(majiq.a3.pos(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.a3.promoter.ob <- reactive({
+        make_granges_obj(majiq.a3.pos(), tool="majiq",type="promoter")
+    })
+    
+    majiq.gr.a3.gene.neg.ob <- reactive({
+        make_granges_obj(majiq.a3.neg(), tool="majiq",type="gene")
+    })
+    
+    majiq.gr.a3.promoter.neg.ob <- reactive({
+        make_granges_obj(majiq.a3.neg(), tool="majiq",type="promoter")
+    })
+    
+    dexseq.gr.ex.gene.ob <- reactive({
+        make_granges_obj(exon_data(), tool="dexseq_pos", type="gene")
+    })
+    
+    dexseq.gr.ex.promoter.ob <- reactive({
+        make_granges_obj(exon_data(), tool="dexseq_pos", type="promoter")
+    })
+    
+    dexseq.gr.ex.gene.neg.ob <- reactive({
+        make_granges_obj(exon_data(), tool="dexseq_neg", type="gene")
+    })
+    
+    dexseq.gr.ex.promoter.neg.ob <- reactive({
+        make_granges_obj(exon_data(), tool="dexseq_neg", type="promoter")
+    })
+    
+    isa.gr.iso.gene.ob <- reactive({
+        make_granges_obj(isoform_data(), tool="isa_pos", type="gene")
+    })
+    
+    isa.gr.iso.promoter.ob <- reactive({
+        make_granges_obj(isoform_data(), tool="isa_pos", type="promoter")
+    })
+    
+    isa.gr.iso.gene.neg.ob <- reactive({
+        make_granges_obj(isoform_data(), tool="isa_neg", type="gene")
+    })
+    
+    isa.gr.iso.promoter.neg.ob <- reactive({
+        make_granges_obj(isoform_data(), tool="isa_neg", type="promoter")
+    })
+    
+    #################### get enrichment result ####################
+    output$check <- renderPrint({ 
+        dexseq.gr.ex.gene.ob()
+        })
+    
+    get_enrich_results <- function(pos, neg, name, enrichment_results) {
+        obsFreq_interest <- c()
+        for (chip in 1:length(all.chips)){
+            # freq_bg=length(subsetByOverlaps(gr.gencode.genes,all_chips[[chip]]))
+            freq_as=length(subsetByOverlaps(pos,all.chips[[chip]]))
+            freq_nas=length(subsetByOverlaps(neg,all.chips[[chip]]))
+            obsFreq_interest <- as.data.frame(rbind(obsFreq_interest,
+                                                    c(as.numeric(freq_as),as.numeric(length(pos))-as.numeric(freq_as),
+                                                      as.numeric(freq_nas),as.numeric(length(neg))-as.numeric(freq_nas),
+                                                      # as.numeric(freq_bg),as.numeric(length(gr.gencode.genes))-as.numeric(freq_bg),
+                                                      names(all.chips)[chip])))
+        }
+        colnames(obsFreq_interest) <- c("freqASwithPeak","freqASnoPeak",
+                                        "freqNASwithPeak","freqNASnoPeak",
+                                        # "freqBGwithPeak","freqBGnoPeak",
+                                        "chip_protein")
+        #3.3. Generate the contingency table
+        library(reshape)
+        final_contingency_table <- c()
+        contingency_table <- melt(data = obsFreq_interest,id.vars = "chip_protein")
+        contingency_table <- contingency_table %>%
+            dplyr::mutate(event=if_else(condition = grepl(pattern = "NAS",x = contingency_table$variable),true = "NAS","AS"))  %>%
+            dplyr::mutate(peak=if_else(condition = grepl(pattern = "withPeak",x = contingency_table$variable),true = "Peak","noPeak"))
+        contingency_table$variable <- NULL
+        for (chip in names(all.chips)){
+            df <- reshape::cast(contingency_table,formula = peak ~event,value.var = "value",fun.aggregate = NULL,subset = chip_protein== chip)
+            df <- df %>% 
+                dplyr::mutate(chip_protein = chip)
+            df <- df[c(2,1),]
+            final_contingency_table <- as.data.frame(rbind(final_contingency_table,
+                                                           df))
+        }
+        
+        #3.4. Perform statistical test (Chi square)
+        for (chip in names(all.chips)){
+            chip_df <- final_contingency_table %>%
+                dplyr::filter(chip_protein == chip)%>%
+                dplyr::select(AS,NAS)
+            chip_df <- apply(X = chip_df,MARGIN = 2,FUN = as.numeric)
+            rownames(chip_df) <- c("noPeak","Peak")
+            chisq <- fisher.test(chip_df,alternative = "two.sided")
+            pval <- chisq$p.value
+            estimate <- chisq$estimate
+            enrichment_results <- as.data.frame(rbind(enrichment_results,
+                                                      c(pval,estimate,chip, name)))
+        }
+        
+        rm(df)
+        return(enrichment_results)
+    }
+    
+    get_gene_enrichment <- reactive({
+        enrichment_results <- c()
+        enrichment_results <- get_enrich_results(majiq.gr.ir.gene.ob(), majiq.gr.ir.gene.neg.ob(), name="Majiq - Intron Retention", enrichment_results = enrichment_results)
+        cat(file=stderr(),"ok1")
+        enrichment_results <- get_enrich_results(majiq.gr.es.gene.ob(), majiq.gr.es.gene.neg.ob(), name="Majiq - Exon Skipping", enrichment_results = enrichment_results)
+        cat(file=stderr(),"ok2")
+        enrichment_results <- get_enrich_results(majiq.gr.a5.gene.ob(), majiq.gr.a5.gene.neg.ob(), name="Majiq - A5SS" , enrichment_results = enrichment_results)  
+        cat(file=stderr(),"ok3")
+        enrichment_results <- get_enrich_results(majiq.gr.a3.gene.ob(), majiq.gr.a3.gene.neg.ob(), name="Majiq - A3SS" , enrichment_results = enrichment_results) 
+        cat(file=stderr(),"ok4")
+        enrichment_results <- get_enrich_results(dexseq.gr.ex.gene.ob(), dexseq.gr.ex.gene.neg.ob(), name="DEXseq - Differential exon" , enrichment_results = enrichment_results) 
+        cat(file=stderr(),"ok5")
+        enrichment_results <- get_enrich_results(isa.gr.iso.gene.ob(), isa.gr.iso.gene.neg.ob(), name="IsoformSwitchAnalyzer - Isoform switch" , enrichment_results = enrichment_results) 
+        colnames(enrichment_results) <- c("pvalue","estimate","chip_dataset","Event type - Tool")
+        return(enrichment_results)
+    })
+    
+    get_promoter_enrichment <- reactive({
+        enrichment_results <- c()
+        enrichment_results <- get_enrich_results(majiq.gr.ir.promoter.ob(), majiq.gr.ir.promoter.neg.ob(), name="Majiq - Intron Retention", enrichment_results = enrichment_results)
+        cat(file=stderr(),"ok1")
+        enrichment_results <- get_enrich_results(majiq.gr.es.promoter.ob(), majiq.gr.es.promoter.neg.ob(), name="Majiq - Exon Skipping", enrichment_results = enrichment_results)
+        cat(file=stderr(),"ok2")
+        enrichment_results <- get_enrich_results(majiq.gr.a5.promoter.ob(), majiq.gr.a5.promoter.neg.ob(), name="Majiq - A5SS" , enrichment_results = enrichment_results)  
+        cat(file=stderr(),"ok3")
+        enrichment_results <- get_enrich_results(majiq.gr.a3.promoter.ob(), majiq.gr.a3.promoter.neg.ob(), name="Majiq - A3SS" , enrichment_results = enrichment_results) 
+        cat(file=stderr(),"ok4")
+        enrichment_results <- get_enrich_results(dexseq.gr.ex.promoter.ob(), dexseq.gr.ex.promoter.neg.ob(), name="DEXseq - Differential exon" , enrichment_results = enrichment_results) 
+        cat(file=stderr(),"ok5")
+        enrichment_results <- get_enrich_results(isa.gr.iso.promoter.ob(), isa.gr.iso.promoter.neg.ob(), name="IsoformSwitchAnalyzer - Isoform switch" , enrichment_results = enrichment_results) 
+        colnames(enrichment_results) <- c("pvalue","estimate","chip_dataset","Event type - Tool")
+        return(enrichment_results)
+    })
+    
+    enrichment_plot_ob <- eventReactive(input$chip_enr_refresh, {
+        ht_data <- get_gene_enrichment()
+        ht_data$pvalue[as.numeric(ht_data$pvalue) > 0.05] <- NA
+        ht_data$pvalue[as.numeric(ht_data$estimate) == "Inf"] <- NA
+        ggplot(ht_data, aes(x = chip_dataset, y = `Event type - Tool`, fill = as.numeric(pvalue))) + 
+            geom_tile() + 
+            labs(fill = "Chi Square pvalue") + 
+            ggtitle("Enrichment analysis of ChIP-seq\npeak in spliced genes")+
+            geom_text(aes(label=round(as.numeric(estimate),digits = 2))) +
+            scale_fill_gradientn(colors= rev(RColorBrewer::brewer.pal(n = 6,name = "BuPu")),na.value = "white")+
+            theme(axis.text.x=element_text(angle = 45))
+        
+    })
+    
+    pro_enrichment_plot_ob <- eventReactive(input$chip_proenr_refresh, {
+        ht_data <- get_promoter_enrichment()
+        ht_data$pvalue[as.numeric(ht_data$pvalue) > 0.05] <- NA
+        ht_data$pvalue[as.numeric(ht_data$estimate) == "Inf"] <- NA
+        ggplot(ht_data, aes(x = chip_dataset, y = `Event type - Tool`, fill = as.numeric(pvalue))) + 
+            geom_tile() + 
+            labs(fill = "Chi Square pvalue") + 
+            ggtitle("Enrichment analysis of ChIP-seq\npeak in spliced genes")+
+            geom_text(aes(label=round(as.numeric(estimate),digits = 2))) +
+            scale_fill_gradientn(colors= rev(RColorBrewer::brewer.pal(n = 6,name = "BuPu")),na.value = "white")+
+            theme(axis.text.x=element_text(angle = 45))
+    })
+    
+    output$pro_enrichment_plot <- renderPlot({ pro_enrichment_plot_ob() })
+    output$enrichment_plot <- renderPlot({ enrichment_plot_ob() })
+    #################### download handler #########################
+    download_handler <- function(plotname, plot, formatdd) {
+        downloadHandler(
+            filename = function() {
+                sprintf("dasire_%s.%s", plotname,formatdd)
+            },
+            content = function(file) {
+                ggsave(file, plot = plot, device = formatdd, width = 10)
+            }
+        )
+    }
+    output$deseq2_pca_down <- download_handler("deseq2_pca", rnapcaplot(), input$deseq2_pca_down_ext)
+    output$deseq2_hm_down <- download_handler("deseq2_heatmap", rnaheatmap(), input$deseq2_hm_down_ext)
+    output$deseq2_gc_down <- download_handler("rna_gc", rna_genecount_plot(), input$deseq2_gc_down_ext)
+    output$deseq2_vc_down <- download_handler("rna_volcano", rna_volcano_plot(), input$deseq2_vc_down_ext)
+    output$star_pp_down <- download_handler("star_pp", star_qc_plot(), input$star_pp_down_ext)
+    output$star_rp_down <- download_handler("star_rp", star_qc_readlength(), input$star_rp_down_ext)
+    output$kall_pp_down <- download_handler("kallisto_pp", pseudo_qc_plot(), input$kall_pp_down_ext)
     #################### dynamic rendering ##########################
     # observeEvent("",{
     #     shinyjs::show("start_panel")

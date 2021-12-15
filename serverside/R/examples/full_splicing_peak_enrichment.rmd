@@ -1,8 +1,8 @@
 ---
 title: "Quality check, differential expression and splicing analysis"
-runtime: shiny
+
 output:
-  html_notebook:
+  pdf_document:
     toc: yes
     toc_float: no
 ---
@@ -574,7 +574,7 @@ grid.newpage(); grid::grid.draw(venn.splicing)
 
 ```{r}
 user_chip_name <- "YBX1"
-user_chip_file  <- "databases/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz" # This eventually will require modification, because the user is supposed to upload their own bed files.
+user_chip_file  <- "/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz" # This eventually will require modification, because the user is supposed to upload their own bed files.
 
 ```
 
@@ -585,10 +585,10 @@ user_chip_file  <- "databases/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz" # T
 # we want to use CHIP experiments of known splicing factors from encode to show as references in the plots.
 
 # Import splicing factors list 
-sf_list <- read.table(file = "databases/splicing_factors_list.txt",header = T,sep = "\t",fill = TRUE)
+sf_list <- read.table(file = "/localscratch/marisol/DASiRe/databases/splicing_factors_list.txt",header = T,sep = "\t",fill = TRUE)
 
 # import reference ENCODE datasets 
-ENCODE_metadata <- read.table("databases/encode_bedNarrowPeak_files/metadata.tsv",sep="\t",header = TRUE)
+ENCODE_metadata <- read.table("/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/metadata.tsv",sep="\t",header = TRUE)
 ENCODE_metadata <- ENCODE_metadata %>%
   dplyr::filter(File.assembly=="GRCh38") %>%
   dplyr::filter(Output.type %in% c("optimal IDR thresholded peaks")) %>%
@@ -617,7 +617,7 @@ library(ChIPseeker)
 
 all.chips <- c()
 for (accession in 1:nrow(input_chips)) {
-  all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
+  all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
 }
 
 all.chips[[user_chip_name]] <- IRanges::reduce(readPeakFile(peakfile = user_chip_file),)
@@ -639,7 +639,7 @@ library(RMariaDB)
 # txdb_object <- makeTxDbFromEnsembl(organism="Homo sapiens",release=NA,circ_seqs=NULL,server="ensembldb.ensembl.org",
 #                                    username="anonymous", password=NULL, port=0L,tx_attrib=NULL)
 
-txdb_object <- makeTxDbFromGFF(file = "databases/gencode_annotation_files/gencode.v36.annotation.gtf",format = "gtf")
+txdb_object <- makeTxDbFromGFF(file = "/localscratch/marisol/DASiRe/databases/gencode_annotation_files/gencode.v36.annotation.gtf",format = "gtf")
 
 library(ChIPpeakAnno)
 peakAnno.edb <- c()
@@ -657,6 +657,8 @@ df_peakAnno.edb$subjectHits <- gsub(pattern = "threeUTRs",replacement = "3'UTR",
 df_peakAnno.edb$subjectHits <- gsub(pattern = "immediateDownstream",replacement = "Immediate downstream",x = df_peakAnno.edb$subjectHits)
 df_peakAnno.edb$subjectHits <- gsub(pattern = "Intergenic.Region",replacement = "Intergenic",x = df_peakAnno.edb$subjectHits)
 
+
+save(txdb_object, df_peakAnno.edb, file="peaksregion.RData")
 library(ggplot2)
 library(viridis)
 renderPlot({
@@ -694,7 +696,7 @@ AT = GenomeAxisTrack( )
 TrackUserChip = AnnotationTrack(all.chips[[user_chip_name]], name=user_chip_name, shape='box',fill='blue',size=2,col="blue")
 
 # Plot peaks in a gene that the user defines
-mart_export <- read.table(file = "databases/mart_export.txt",sep = "\t",header = T)
+mart_export <- read.table(file = "/localscratch/marisol/DASiRe/databases/mart_export.txt",sep = "\t",header = T)
 
 renderPlot({
 plotTracks(c(TrackUserChip, bm, AT),
@@ -739,11 +741,11 @@ The main steps are:
 
 all.chips <- c()
 for (accession in 1:nrow(input_chips)) {
-  all.chips[[input_chips$Experiment.target[accession]]] <- reduce(readPeakFile(peakfile = paste0("databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
+  all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
 }
-all.chips[[user_chip_name]] <- reduce(readPeakFile(peakfile = user_chip_file),)
+all.chips[[user_chip_name]] <- IRanges::reduce(readPeakFile(peakfile = user_chip_file),)
 
-mart_export <- read.table(file = "databases/mart_export.txt",sep = "\t",header = T)
+mart_export <- read.table(file = "/localscratch/marisol/DASiRe/databases/mart_export.txt",sep = "\t",header = T)
 mart_export$chromosome_name <- paste0("chr",mart_export$chromosome_name)
 
 ################
@@ -935,7 +937,7 @@ DEXseq_res <- as.data.frame(dxr1)
 pos_genes_to_select <- gsub(pattern = "\\..*",replacement = "",x = unique(DEXseq_res$groupID[DEXseq_res$padj<0.1]))
 mart_filt <- mart_export %>%
   dplyr::filter(ensembl_gene_id %in% pos_genes_to_select)
-mart_filt <- unique(mart_filt[c("ensembl_gene_id","external_gene_name","start_position","end_position","chromosome_name")])
+mart_filt <- base::unique(mart_filt[c("ensembl_gene_id","external_gene_name","start_position","end_position","chromosome_name")])
 dexseq.gr.ex.gene <-   GRanges(seqnames = Rle( mart_filt$chromosome_name),
                               ranges = IRanges( start = mart_filt$start_position,
                                                 end = mart_filt$end_position),
@@ -1389,14 +1391,14 @@ ht_data <- enrichment_results
 ht_data$pvalue[as.numeric(ht_data$pvalue) > 0.05] <- NA
 ht_data$pvalue[as.numeric(ht_data$estimate) == "Inf"] <- NA
 
-renderPlot({
+
 ggplot(ht_data, aes(x = chip_dataset, y = `Event type - Tool`, fill = as.numeric(pvalue))) + 
   geom_tile() + 
   labs(fill = "Chi Square pvalue") + 
   ggtitle("Enrichment analysis of ChIP-seq\npeak in spliced genes")+
   geom_text(aes(label=round(as.numeric(estimate),digits = 2))) +
   scale_fill_gradientn(colors= rev(RColorBrewer::brewer.pal(n = 6,name = "BuPu")),na.value = "white")
-})
+
 ```
 
 
