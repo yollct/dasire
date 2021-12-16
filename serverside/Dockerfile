@@ -26,8 +26,10 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10
 
 RUN wget https://raw.githubusercontent.com/rocker-org/shiny/master/shiny-server.sh -O /usr/bin/shiny-server.sh; chmod +x /usr/bin/shiny-server.sh
 
+COPY /localscratch/marisol/DASiRe/databases/* /databases/
+RUN chown 777 /databases -R
 
-EXPOSE 3838tryCatch(install.packages(\"BiocManager\"),  warning = function(w){ stop(\"install command gave a warning\")})
+EXPOSE 3838
 CMD ["/usr/bin/shiny-server.sh"]
 
 
