@@ -39,7 +39,9 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10
 
 RUN wget https://raw.githubusercontent.com/rocker-org/shiny/master/shiny-server.sh -O /usr/bin/shiny-server.sh; chmod +x /usr/bin/shiny-server.sh
 
-COPY databases/ /databases/
+COPY /localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/ /examples/databases/
+COPY /localscratch/marisol/DASiRe/databases/mart_export.txt /databases/
+COPY /localscratch/marisol/DASiRe/databases/splicing_factors_list.txt /examples/databases/
 RUN chmod 777 /databases -R
 
 EXPOSE 3838
