@@ -1,5 +1,10 @@
 FROM rocker/shiny-verse
 
+COPY /databases/encode_bedNarrowPeak_files/ /examples/databases/
+COPY /databases/mart_export.txt /databases/
+COPY /databases/splicing_factors_list.txt /examples/databases/
+RUN chmod 777 /databases -R
+
 RUN apt-get update && apt-get --no-install-recommends --fix-broken install -y curl libcurl4-openssl-dev libssl-dev libxml2-dev vim samtools unar libbz2-dev liblzma-dev libglpk-dev
 RUN R -e "tryCatch(install.packages(\"BiocManager\"),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(install.packages(\"optparse\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
@@ -39,10 +44,7 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10
 
 RUN wget https://raw.githubusercontent.com/rocker-org/shiny/master/shiny-server.sh -O /usr/bin/shiny-server.sh; chmod +x /usr/bin/shiny-server.sh
 
-COPY /localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/ /examples/databases/
-COPY /localscratch/marisol/DASiRe/databases/mart_export.txt /databases/
-COPY /localscratch/marisol/DASiRe/databases/splicing_factors_list.txt /examples/databases/
-RUN chmod 777 /databases -R
+
 
 EXPOSE 3838
 CMD ["/usr/bin/shiny-server.sh"]
