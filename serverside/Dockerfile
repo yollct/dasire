@@ -1,8 +1,8 @@
 FROM rocker/shiny-verse
 
-COPY /examples/encode_bedNarrowPeak_files/ /examples/databases/
-COPY /examples/mart_export.txt /databases/
-COPY /examples/splicing_factors_list.txt /examples/databases/
+COPY /R/examples/encode_bedNarrowPeak_files/ /examples/databases/
+COPY /R/examples/mart_export.txt /databases/
+COPY /R/examples/splicing_factors_list.txt /examples/databases/
 RUN chmod 777 /databases -R
 
 RUN apt-get update && apt-get --no-install-recommends --fix-broken install -y curl libcurl4-openssl-dev libssl-dev libxml2-dev vim samtools unar libbz2-dev liblzma-dev libglpk-dev
