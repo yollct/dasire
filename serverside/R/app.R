@@ -380,6 +380,9 @@ server <- function(input, output, session) {
                                      icon = icon("download", class = "opt"), 
                                      up = TRUE))
                          )),
+                tabPanel("Splicing summary",
+                         box(width=12,
+                             withSpinner(plotOutput("switch_enrich"),type=4))),
                 tabPanel("Gene Switch plots",
                          div(
                             actionButton("load_iso", "Load"),
@@ -965,6 +968,22 @@ server <- function(input, output, session) {
     })
     
     output$switch_table <- renderDataTable({switch_table_tb()})
+    
+    splice_enrich_plot <- reactive({
+        exampleSwitchListAnalyzed <- isoform_data()
+        
+        extractSplicingGenomeWide(
+            exampleSwitchListAnalyzed,
+            featureToExtract = 'all',                 # all isoforms stored in the switchAnalyzeRlist
+            splicingToAnalyze = c('A3','MES','ATSS'), # Splice types significantly enriched in COAD
+            plot=TRUE,
+            returnResult=FALSE  # Preventing the summary statistics to be returned as a data.frame
+        )
+        
+        
+    })
+    
+    output$splice_enrich <- renderPlot({ splice_enrich_plot() })
     ######################### DEXSeq ################################
     
     exon_data <- reactive({
