@@ -1,6 +1,6 @@
 FROM rocker/shiny-verse
 
-RUN apt-get update && apt-get --no-install-recommends --fix-broken install -y curl libcurl4-openssl-dev libssl-dev libxml2-dev vim samtools unar libbz2-dev liblzma-dev
+RUN apt-get update && apt-get --no-install-recommends --fix-broken install -y curl libcurl4-openssl-dev libssl-dev libxml2-dev vim samtools unar libbz2-dev liblzma-dev libglpk-dev
 RUN R -e "tryCatch(install.packages(\"BiocManager\"),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(install.packages(\"optparse\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(install.packages(\"reshape\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
