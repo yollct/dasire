@@ -1477,7 +1477,7 @@ server <- function(input, output, session) {
         input_chips <- filter_encode_meta()
         all.chips <- c()
         for (accession in 1:nrow(input_chips)) {
-            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
+            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("examples/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
         }
         
         all.chips[[user_chip_name]] <- IRanges::reduce(readPeakFile(peakfile = user_chip_file),)
