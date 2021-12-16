@@ -1467,7 +1467,7 @@ server <- function(input, output, session) {
     
     allchips_obj <- reactive({
         if (input$useexamples_chip==TRUE){
-            user_chip_file  <- "/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz"
+            user_chip_file  <- "examples/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz"
             
         } else {
             user_chip_file <- input$chipseq_bed
@@ -1544,7 +1544,7 @@ server <- function(input, output, session) {
     })
     
     mart_export_obj <- reactive({
-        mart_export <- read.table(file = "/localscratch/marisol/DASiRe/databases/mart_export.txt",sep = "\t",header = T)
+        mart_export <- read.table(file = "examples/mart_export.txt",sep = "\t",header = T)
         mart_export$chromosome_name <- paste0("chr",mart_export$chromosome_name)
         return(mart_export)
     })
