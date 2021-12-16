@@ -30,7 +30,7 @@ library(RMariaDB)
 library(biomaRt)
 library(Gviz)
 library(ChIPpeakAnno)
-
+library(shinyFiles)
 
 source("global.R")
 `%notin%` <- Negate(`%in%`)
@@ -80,34 +80,20 @@ ui <- dashboardPage(
                             column(12,
                                    box(
                                        title="Upload sample data",
-                                       div(h3("Check to use our example data and press the upload button."),
+                                       div(h4("Check to use our example data and press the upload button."),
                                            checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
-                                           h3("Please fill in the following to use your data."),
-                                           fileInput(
-                                               inputId = "rnaseq_csv",
-                                               label="Choose RNAseq data you want to run.",
-                                               accept = "text/csv"
-                                           ),
-                                           checkboxInput("header_rna", "Header", value=TRUE),
-                                           textInput("rnaseq_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
-                                           fileInput(
-                                               inputId = "rnaseq_meta",
-                                               label="Choose meta data for your data.",
-                                               accept="text/csv"
-                                           ),
-                                           checkboxInput("header_rnameta", "Header", value=TRUE),
-                                           textInput("rnaseq_meta_sep", "Delimiter", value="\t", placeholder="Type in delimiter."),
-                                       ),
+                                           h4("Please input the preprocessing output directory."),
+                                           shinyDirButton("dir", "Input directory", "Upload"),
                                        div(
                                            actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
                                        )
-                                   ),
+                                   )),
                                    box(
                                        title="Upload ChIP data",
                                        div(
-                                           h3("Check to use our example data and press the upload button."),
+                                           h4("Check to use our example data and press the upload button."),
                                            checkboxInput(inputId="useexamples_chip", label="Use example data", value=TRUE),
-                                           h3("Please fill in the following to use your data."),
+                                           h4("Please input the preprocessing output directory."),
                                            fileInput(inputId = "chipseq_bed", label="Choose your ChIPseq bed file"),
                                            actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
                                        )
@@ -118,311 +104,63 @@ ui <- dashboardPage(
                                        title="Select annotation",
                                        div(checkboxInput("gtf", "Use GENCODE gtf.", value=TRUE))
                                    )
+                                   
                             )
                         )
                     )
-                )
-            ),
+                
+            )),
             tabItem(
                 tabName="deseq2",
-                fluidRow(column(width=12,box(
-                                column(4, h4("Select parameters:"),
-                                selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
-                                selectizeInput("rna_meta_var2", "Select a variable", choices=c())),
-                                column(8, checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
-                                actionButton("load_deseq2", "Load Analysis", icon = icon("play-circle")))))),
-                fluidRow(column(12, tabBox(title = "Visualization", width=12, height=8,
-                                           tabPanel("PCA",
-                                                    fluidRow(column(width=6,
-                                                                    withSpinner(plotlyOutput("rna_pca"), type=4),
-                                                                    div(style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                                                        dropdown(
-                                                                            selectInput(inputId="deseq2_pca_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                                                            downloadButton(outputId = "deseq2_pca_down", label = "DOWNLOAD"),
-                                                                            size = "xs",
-                                                                            icon = icon("download", class = "opt"), 
-                                                                            up = TRUE))),
-                                                             column(width=6,
-                                                                    withSpinner(plotOutput("rna_heatmap"), type=4),
-                                                                    div(style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                                                        dropdown(
-                                                                            selectInput(inputId="deseq2_hm_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                                                            downloadButton(outputId = "deseq2_hm_down", label = "DOWNLOAD"),
-                                                                            size = "xs",
-                                                                            icon = icon("download", class = "opt"), 
-                                                                            up = TRUE
-                                                                        ))))),
-                                           tabPanel("Gene Normalized Counts",
-                                                    box(selectizeInput("gene_name", label = "Gene", choices = c()),
-                                                        withSpinner(plotOutput("rna_genecount"), type=4),
-                                                        div(style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                                            dropdown(
-                                                                selectInput(inputId="deseq2_gc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                                                downloadButton(outputId = "deseq2_gc_down", label = "DOWNLOAD"),
-                                                                size = "xs",
-                                                                icon = icon("download", class = "opt"), 
-                                                                up = TRUE
-                                                            )
-                                                        )
-                                                    ),
-                                           ),
-                                           tabPanel("DESeq2 result",
-                                                    fluidRow(box(selectInput("deseq_result", label = "Result", choices = c()),
-                                                            withSpinner(plotOutput("rna_volcano"), type=4),
-                                                            div(style = "position: absolute; left: 1em; bottom: 0em;",
-                                                                dropdown(
-                                                                    selectInput(inputId="deseq2_vc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                                                    downloadButton(outputId = "deseq2_vc_down", label = "DOWNLOAD"),
-                                                                    size = "xs",
-                                                                    icon = icon("download", class = "opt"), 
-                                                                    up = TRUE
-                                                                )
-                                                            )
-                                                        )
-                                                    ),
-                                                    fluidRow(div(withSpinner(DT::dataTableOutput("rna_deseq_table"), type=4),
-                                                            div(style = "position: absolute; left: 1em; bottom: 0em;",
-                                                                dropdown(
-                                                                    downloadButton(outputId = "deseq2_table_csv", label = "CSV"),
-                                                                    downloadButton(outputId = "deseq2_table_excel", label = "EXCEL"),
-                                                                    size = "xs",
-                                                                    icon = icon("download", class = "opt"), 
-                                                                    up = FALSE
-                                                                ))))))))),
+                fluidRow(
+                    column(12,
+                        box(width=12,
+                            h4("Select parameters:"),
+                            selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
+                            selectizeInput("rna_meta_var2", "Select a variable", choices=c()),
+                            checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
+                            actionButton("load_deseq2", "Load Analysis", icon = icon("play-circle")),
+                        )
+                    )),
+                uiOutput("deseq2_panels")
+            ),
             tabItem(
                 tabName="rna_qc",
-                fluidRow(column(12,
-                    tabBox(id="Quality control",
-                        tabPanel("STAR alignment", 
-                            fluidRow(actionButton("load_qc", "Load Analysis", icon = icon("play-circle"))),
-                            fluidRow(column(6, box(
-                                     withSpinner(plotOutput("star_qc_percentplot"), type=4),
-                                     div(
-                                         style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                         dropdown(
-                                             selectInput(inputId="star_pp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                             downloadButton(outputId = "star_pp_down", label = "DOWNLOAD"),
-                                             size = "xs",
-                                             icon = icon("download", class = "opt"), 
-                                             up = TRUE)))),
-                                 column(6,box(withSpinner(plotOutput("star_qc_readlenplot"), type=4), 
-                                     div(
-                                         style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                         dropdown(
-                                             selectInput(inputId="star_rp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                             downloadButton(outputId = "star_rp_down", label = "DOWNLOAD"),
-                                             size = "xs",
-                                             icon = icon("download", class = "opt"), 
-                                             up = TRUE)))))),
-                        tabPanel("Kallisto pseudoalignment",
-                                 fluidRow(actionButton("load_qc", "Load Analysis", icon = icon("play-circle"))),
-                                 fluidRow(box(
-                                     withSpinner(
-                                         plotOutput("kallisto_percentplot"), type=4
-                                     ), 
-                                     div(
-                                         style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                         dropdown(
-                                             selectInput(inputId="kall_pp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                             downloadButton(outputId = "kall_pp_down", label = "DOWNLOAD"),
-                                             size = "xs",
-                                             icon = icon("download", class = "opt"), 
-                                             up = TRUE))))))))),
+                uiOutput("rna_qc_panels")
+            ),
             tabItem(
                 tabName = "rna_iso",
-                    fluidRow(column(12, tabBox(
-                        actionButton("load_iso", "Load Analysis", icon = icon("play-circle")),
-                        id="Isoform switch analysis",
-                        tabPanel("Genome-wide isoform splicing analysis",
-                                 box(withSpinner(plotOutput("switch_sum")),
-                                     div(style = "position: absolute; left: 1em; bottom: 0em;",
-                                         dropdown(
-                                             selectInput(inputId="iso_switch_sum_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                             downloadButton(outputId = "iso_switch_sum_down", label = "DOWNLOAD"),
-                                             size = "xs",
-                                             icon = icon("download", class = "opt"), 
-                                             up = TRUE)))),
-                        tabPanel("Gene Switch plots",
-                                 selectInput("iso_gene_name", "Select a gene", choices=c()),
-                                 withSpinner(plotOutput("switch_plot"), type=4),
-                                 div(
-                                     style = "position: absolute; left: 1em; bottom: 0em;",
-                                     dropdown(
-                                         selectInput(inputId="iso_switch_plot_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                         downloadButton(outputId = "iso_switch_plot_down", label = "DOWNLOAD"),
-                                         size = "xs",
-                                         icon = icon("download", class = "opt"), 
-                                         up = TRUE
-                                     )
-                                 )
-                        ),
-                        tabPanel("Genes Switch table",
-                                 withSpinner(DT::dataTableOutput("switch_table")),
-                                 div(
-                                     style = "position: absolute; left: 1em; bottom: 0em;",
-                                     dropdown(
-                                         downloadButton(outputId = "iso_table_csv", label = "CSV"),
-                                         downloadButton(outputId = "iso_table_excel", label = "EXCEL"),
-                                         size = "xs",
-                                         icon = icon("download", class = "opt"), 
-                                         up = FALSE))))))),
+                uiOutput("rna_iso_panels")
+            ),
             tabItem(
                 tabName = "rna_exon",
-                fluidRow(column(12,box(
-                    h4("Select parameters:"),
-                    textInput("exons_pval_thres", "Select a p-value threshold", value = 0.1),
-                    textInput("exons_fc_thres", "Select a fold change threshold", value = 1.5),
-                    actionButton("load_exon", "Load Analysis", icon = icon("play-circle"))
-                ))),
-                fluidRow(column(12, tabBox(
-                    title="DEXSeq",
-                    tabPanel("Summary of DEXSeq",
-                             fluidRow(
-                                 box(width=3,withSpinner(textOutput("exons_evaluated"),type=4,size=0.2, proxy.height="5px"),
-                                     p("Number of exons evaluated")),
-                                 box(width=3,
-                                     withSpinner(textOutput("exons_de"),type=4,size=0.2, proxy.height="5px"),
-                                     p("Number of exons differentially expressed")),
-                                 box(width=3,
-                                     withSpinner(textOutput("exons_gene"),type=4,size=0.2, proxy.height="5px"),
-                                     p("Number of genes evaluated")),
-                                 box(width=3,
-                                     withSpinner(textOutput("exons_gene_de"),type=4,size=0.2, proxy.height="5px"),
-                                     p("Number of genes with at least one exon differentially expressed"))),
-                             fluidRow(
-                                 box(width=6,
-                                     selectizeInput("exon_gene_name", label="Gene", choices=c()),
-                                     withSpinner(plotOutput("exons_per_gene"), type=4),
-                                     div(
-                                         style = "position: absolute; left: 1em; bottom: 0em;",
-                                         dropdown(
-                                             selectInput(inputId="exons_gene_plot_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                             downloadButton(outputId = "exons_gene_plot_down_ext", label = "DOWNLOAD"),
-                                             size = "xs",
-                                             icon = icon("download", class = "opt"), 
-                                             up = TRUE))))),
-                    tabPanel("DEXSeq table",
-                             box(
-                                 withSpinner(DT::dataTableOutput("exons_table"), type=4),
-                                 div(
-                                     style = "position: absolute; left: 1em; bottom: 0em;",
-                                     dropdown(
-                                         downloadButton(outputId = "exons_table_csv", label = "CSV"),
-                                         downloadButton(outputId = "exons_table_excel", label = "EXCEL"),
-                                         size = "xs",
-                                         icon = icon("download", class = "opt"), 
-                                         up = FALSE)))))))),
+                fluidRow(
+                    column(12,
+                        box(width=12,
+                            h4("Select parameters:"),
+                            textInput("exons_pval_thres", "Select a p-value threshold", value = 0.1),
+                            textInput("exons_fc_thres", "Select a fold change threshold", value = 1.5),
+                            actionButton("load_exon", "Load Analysis", icon = icon("play-circle"))
+                        )
+                    )),
+                uiOutput("rna_exon_panels")
+            ),
             tabItem(
                 tabName="rna_splice",
-                fluidRow(column(12,
-                                tabBox(title="Splicing events",
-                                       height=8,
-                                       tabPanel("Number of events",
-                                                actionButton("load_majiq", "Load Analysis", icon = icon("play-circle"))),
-                                       box(width=6,
-                                           withSpinner(
-                                               plotOutput("event_sum"),type=4
-                                           ),
-                                           div(
-                                               style = "position: absolute; left: 1em; bottom: 0em;",
-                                               dropdown(
-                                                   selectInput(inputId="majiq_event_sum_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                                   downloadButton(outputId = "majiq_event_sum_down", label = "DOWNLOAD"),
-                                                   size = "xs",
-                                                   icon = icon("download", class = "opt"), 
-                                                   up = TRUE))),
-                                       box(width=6,
-                                           withSpinner(plotOutput("majiq_heatmap"), type=4),
-                                           div(
-                                               style = "position: absolute; left: 1em; bottom: 0em;",
-                                               dropdown(
-                                                   selectInput(inputId="exons_hm_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                                   downloadButton(outputId = "exons_hm_down", label = "DOWNLOAD"),
-                                                   size = "xs",
-                                                   icon = icon("download", class = "opt"), 
-                                                   up = TRUE
-                                               ))))))
+                uiOutput("rna_splice_panels")
             ),
             tabItem(
                 tabName="chip_qc",
-                fluidRow(column(12, tabBox(
-                    title="ChIP-Seq ENCODE",
-                    tabPanel("ENCODE table",
-                             column(
-                                 width=3,
-                                 selectInput("fileassembly", label="Choose an assembly version", choices=c()),
-                                 selectInput("biosample", label="Choose a sample", choices=c())
-                             ),
-                             box(
-                                 withSpinner(
-                                     DT::dataTableOutput("encode_table")
-                                 ),
-                                 div(
-                                     style = "position: absolute; left: 1em; bottom: 0em;",
-                                     dropdown(
-                                         downloadButton(outputId = "encode_table_csv", label = "CSV"),
-                                         downloadButton(outputId = "encode_table_excel", label = "EXCEL"),
-                                         size = "xs",
-                                         icon = icon("download", class = "opt"), 
-                                         up = FALSE)))),
-                    tabPanel("Vis peaks",
-                             withSpinner(plotOutput("bedpeaks")),
-                             div(
-                                 style = "position: absolute; left: 1em; bottom: 0em;",
-                                 dropdown(
-                                     selectInput(inputId="chip_bedpk_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                     downloadButton(outputId = "chip_bedpk_down", label = "DOWNLOAD"),
-                                     size = "xs",
-                                     icon = icon("download", class = "opt"), 
-                                     up = TRUE
-                                 ))),
-                    tabPanel("Gene track",
-                             selectizeInput("gene_to_display", label="", choices=c()),
-                             withSpinner(plotOutput("chipgenetrack")),
-                             div(
-                                 style = "position: absolute; left: 1em; bottom: 0em;",
-                                 dropdown(
-                                     selectInput(inputId="chip_genetrack_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                     downloadButton(outputId = "chip_genetrack_down", label = "DOWNLOAD"),
-                                     size = "xs",
-                                     icon = icon("download", class = "opt"), 
-                                     up = TRUE))))))
+                uiOutput("chip_qc_panels")
             ),
             tabItem(
                 tabName = "peak_enr",
-                fluidRow(column(12, tabBox(
-                    title="ChIP-seq peak enrichment",
-                    tabPanel("Gene level peak enrichment",
-                             actionButton("chip_enr_refresh", label="Load Analysis"),
-                             withSpinner(
-                                 plotOutput("enrichment_plot")
-                             ),
-                             div(
-                                 style = "position: absolute; left: 1em; bottom: 0em;",
-                                 dropdown(
-                                     selectInput(inputId="chip_geneenr_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                     downloadButton(outputId = "chip_geneenr_down", label = "DOWNLOAD"),
-                                     size = "xs",
-                                     icon = icon("download", class = "opt"), 
-                                     up = TRUE
-                                 ))),
-                    tabPanel("Promoter level peak enrichment",
-                             actionButton("chip_proenr_refresh", label="Load Analysis"),
-                             withSpinner(
-                                 plotOutput("pro_enrichment_plot")
-                             ),
-                             div(
-                                 style = "position: absolute; left: 1em; bottom: 0em;",
-                                 dropdown(
-                                     selectInput(inputId="chip_pro_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                     downloadButton(outputId = "chip_pro_down", label = "DOWNLOAD"),
-                                     size = "xs",
-                                     icon = icon("download", class = "opt"), 
-                                     up = TRUE))))))
+                uiOutput("chip_peak_panels")
             )
         )
     )
 )
+
 
 
 
@@ -451,6 +189,7 @@ server <- function(input, output, session) {
             )
         )
     })
+
     
     output$chipseq_page <- renderMenu({
         #show menu only if chipseq data uploaded
@@ -468,6 +207,417 @@ server <- function(input, output, session) {
             )
         )
     })
+    
+    output$deseq2_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                title = "Visualization",
+                width=12,
+                height=8,
+                tabPanel("PCA",
+                         box(
+                             withSpinner(plotlyOutput("rna_pca"), type=4),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="deseq2_pca_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "deseq2_pca_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         ),
+                         box(
+                             withSpinner(
+                                 plotOutput("rna_heatmap"), type=4
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="deseq2_hm_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "deseq2_hm_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         )
+                         
+                ),
+                tabPanel("Gene Normalized Counts",
+                         box(
+                             selectizeInput("gene_name", label = "Gene", choices = c()),
+                             withSpinner(
+                                 plotOutput("rna_genecount"), type=4
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="deseq2_gc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "deseq2_gc_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         ),
+                ),
+                tabPanel("DESeq2 result",
+                         box(
+                             div(
+                                 selectInput("deseq_result", label = "Result", choices = c()),
+                                 withSpinner(
+                                     plotOutput("rna_volcano"), type=4
+                                 )
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="deseq2_vc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "deseq2_vc_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         ),
+                         div(
+                             withSpinner(
+                                 DT::dataTableOutput("rna_deseq_table"), type=4
+                             ),
+                             div(style = "position: absolute; left: 1em; bottom: 0em;",
+                                 dropdown(
+                                     downloadButton(outputId = "deseq2_table_csv", label = "CSV"),
+                                     downloadButton(outputId = "deseq2_table_excel", label = "EXCEL"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = FALSE
+                                 ))
+                             
+                             
+                         )
+                )
+            )
+        ))
+    })
+    
+    output$rna_qc_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                id="Quality control",
+                width=12,
+                tabPanel("STAR alignment",
+                         box(
+                             actionButton("load_qc", "Load Analysis", icon = icon("play-circle")),
+                             withSpinner(
+                                 plotOutput("star_qc_percentplot"), type=4
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="star_pp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "star_pp_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         ),
+                         box(
+                             withSpinner(
+                                 plotOutput("star_qc_readlenplot"), type=4
+                             ), 
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="star_rp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "star_rp_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         )
+                ),
+                tabPanel("Kallisto pseudoalignment",
+                         width=12,
+                         box(
+                             width=6,
+                             withSpinner(
+                                 plotOutput("kallisto_percentplot"), type=4
+                             ), 
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                 dropdown(
+                                     selectInput(inputId="kall_pp_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "kall_pp_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 )
+                             )
+                         )
+                )
+            )
+        ))
+    })
+    
+    output$rna_iso_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                id="Isoform switch analysis",
+                width=12,
+                height=8,
+                tabPanel("Genome-wide isoform splicing analysis",
+                         box(width=12,
+                             withSpinner(plotOutput("switch_sum"),type=4),
+                             div(style = "position: absolute; left: 1em; bottom: 0em;",
+                                 dropdown(
+                                     selectInput(inputId="iso_switch_sum_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "iso_switch_sum_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE))
+                         )),
+                tabPanel("Gene Switch plots",
+                         div(
+                            actionButton("load_iso", "Load"),
+                            selectInput("iso_gene_name", "Select a gene", choices=c()),
+                            withSpinner(
+                                 plotOutput("switch_plot"), type=4
+                             ),
+                            div(
+                                style = "position: absolute; left: 1em; bottom: 0em;",
+                                dropdown(
+                                    selectInput(inputId="iso_switch_plot_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                    downloadButton(outputId = "iso_switch_plot_down", label = "DOWNLOAD"),
+                                    size = "xs",
+                                    icon = icon("download", class = "opt"), 
+                                    up = TRUE
+                                ))
+                         )
+                ),
+                tabPanel("Genes Switch table",
+                         withSpinner(
+                             DT::dataTableOutput("switch_table"), type=4
+                         ),
+                         div(
+                             style = "position: absolute; left: 1em; bottom: 0em;",
+                             dropdown(
+                                 downloadButton(outputId = "iso_table_csv", label = "CSV"),
+                                 downloadButton(outputId = "iso_table_excel", label = "EXCEL"),
+                                 size = "xs",
+                                 icon = icon("download", class = "opt"), 
+                                 up = FALSE))
+                ))))
+    })
+    
+    output$rna_exon_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                title="DEXSeq",
+                width=12,
+                height=8,
+                tabPanel("Summary of DEXSeq",
+                         fluidRow(
+                             box(width=3,
+                                 withSpinner(
+                                     textOutput("exons_evaluated"),type=4,size=0.2, proxy.height="5px"
+                                 ),
+                                 p("Number of exons evaluated")
+                             ),
+                             box(width=3,
+                                 withSpinner(
+                                     textOutput("exons_de"),type=4,size=0.2, proxy.height="5px"),
+                                 p("Number of exons differentially expressed")),
+                             box(width=3,
+                                 withSpinner(
+                                     textOutput("exons_gene"),type=4,size=0.2, proxy.height="5px"),
+                                 p("Number of genes evaluated")
+                             ),
+                             box(width=3,
+                                 withSpinner(
+                                     textOutput("exons_gene_de"),type=4,size=0.2, proxy.height="5px"),
+                                 p("Number of genes with at least one exon differentially expressed")
+                             )
+                         ),
+                         fluidRow(
+                             box(width=6,
+                                 selectizeInput("exon_gene_name", label="Gene", choices=c()),
+                                 withSpinner(
+                                     plotOutput("exons_per_gene"), type=4
+                                 ),
+                                 div(
+                                     style = "position: absolute; left: 1em; bottom: 0em;",
+                                     dropdown(
+                                         selectInput(inputId="exons_gene_plot_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "exons_gene_plot_down_ext", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE))
+                                 
+                             )
+                         )
+                ),
+                tabPanel("DEXSeq table",
+                         box(
+                             withSpinner(
+                                 DT::dataTableOutput("exons_table"), type=4
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0em;",
+                                 dropdown(
+                                     downloadButton(outputId = "exons_table_csv", label = "CSV"),
+                                     downloadButton(outputId = "exons_table_excel", label = "EXCEL"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = FALSE))
+                             
+                         )
+                )
+            )
+        ))
+    })
+    
+    output$rna_splice_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                title="Splicing events",
+                width=12,
+                tabPanel("Number of events",
+                         actionButton("load_majiq", "Load Analysis", icon = icon("play-circle")),
+                         box(width=6,
+                             withSpinner(
+                                 plotOutput("event_sum"),type=4
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0em;",
+                                 dropdown(
+                                     selectInput(inputId="majiq_event_sum_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "majiq_event_sum_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE))
+                             
+                         ),
+                         box(width=6,
+                             withSpinner(
+                                 plotOutput("majiq_heatmap"), type=4
+                             ),
+                             div(
+                                 style = "position: absolute; left: 1em; bottom: 0em;",
+                                 dropdown(
+                                     selectInput(inputId="exons_hm_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                     downloadButton(outputId = "exons_hm_down", label = "DOWNLOAD"),
+                                     size = "xs",
+                                     icon = icon("download", class = "opt"), 
+                                     up = TRUE
+                                 ))
+                         )),
+                tabPanel("Event table",
+                    withSpinner(DT::dataTableOutput("majiq_table"), type=4)
+                ))))
+    })
+    
+    output$chip_qc_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                title="ChIP-Seq ENCODE",
+                width=12,
+                tabPanel("ENCODE table",
+                         column(
+                             width=6,
+                             actionButton("load_encode", "Load ENCODE DATA"),
+                             selectInput("fileassembly", label="Choose an assembly version", choices=c()),
+                             selectInput("biosample", label="Choose a sample", choices=c())
+                             
+                         ),
+                         withSpinner(
+                             DT::dataTableOutput("encode_table"), type=4
+                         ),
+                         div(
+                             style = "position: absolute; left: 1em; bottom: 0em;",
+                             dropdown(
+                                 downloadButton(outputId = "encode_table_csv", label = "CSV"),
+                                 downloadButton(outputId = "encode_table_excel", label = "EXCEL"),
+                                 size = "xs",
+                                 icon = icon("download", class = "opt"), 
+                                 up = FALSE))
+                         
+                ),
+                tabPanel("Vis peaks",
+                         withSpinner(
+                             plotOutput("bedpeaks"), type=4
+                         ),
+                         div(
+                             style = "position: absolute; left: 1em; bottom: 0em;",
+                             dropdown(
+                                 selectInput(inputId="chip_bedpk_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                 downloadButton(outputId = "chip_bedpk_down", label = "DOWNLOAD"),
+                                 size = "xs",
+                                 icon = icon("download", class = "opt"), 
+                                 up = TRUE
+                             ))
+                         
+                ),
+                tabPanel("Gene track",
+                         selectizeInput("gene_to_display", label="", choices=c()),
+                         withSpinner(
+                             plotOutput("chipgenetrack"), type=4
+                         ),
+                         div(
+                             style = "position: absolute; left: 1em; bottom: 0em;",
+                             dropdown(
+                                 selectInput(inputId="chip_genetrack_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                 downloadButton(outputId = "chip_genetrack_down", label = "DOWNLOAD"),
+                                 size = "xs",
+                                 icon = icon("download", class = "opt"), 
+                                 up = TRUE))
+                )
+            )
+            
+        ))
+    })
+    
+    output$chip_peak_panels <- renderUI({
+        fluidRow(column(12,
+            tabBox(
+                title="ChIP-seq peak enrichment",
+                width=12,
+                tabPanel("Gene level peak enrichment",
+                         actionButton("chip_enr_refresh", label="Load Analysis"),
+                         withSpinner(
+                             plotOutput("enrichment_plot"),type=4
+                         ),div(
+                             style = "position: absolute; left: 1em; bottom: 0em;",
+                             dropdown(
+                                 selectInput(inputId="chip_geneenr_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                 downloadButton(outputId = "chip_geneenr_down", label = "DOWNLOAD"),
+                                 size = "xs",
+                                 icon = icon("download", class = "opt"), 
+                                 up = TRUE
+                             ))
+                         ,
+                         verbatimTextOutput("check")),
+                tabPanel("Promoter level peak enrichment",
+                         actionButton("chip_proenr_refresh", label="Load Analysis"),
+                         withSpinner(
+                             plotOutput("pro_enrichment_plot"), type=4
+                         ),
+                         div(
+                             style = "position: absolute; left: 1em; bottom: 0em;",
+                             dropdown(
+                                 selectInput(inputId="chip_pro_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                 downloadButton(outputId = "chip_pro_down", label = "DOWNLOAD"),
+                                 size = "xs",
+                                 icon = icon("download", class = "opt"), 
+                                 up = TRUE))
+                         
+                )
+            )
+        ))
+    })
  
     
         # fluidRow(
@@ -479,8 +629,6 @@ server <- function(input, output, session) {
     
     #################### data handler / modal ##########################
     import_data_modal <- function(failed=F){
-        cat(file=stderr(), getwd(),"\n")
-        cat(file=stderr(), "liiiii", list.files(getwd()), "\n")
         if (failed==F){
             if (input$useexamples == TRUE){
                 modalDialog(
@@ -685,7 +833,7 @@ server <- function(input, output, session) {
         dds<-dds_obj()
         gene_counts <- plotCounts(dds, 
                                   gene=input$gene_name, 
-                                  intgroup=input$rna_meta_var1, 
+                                  intgroup=c(input$rna_meta_var1), 
                                   returnData=TRUE)
         gene_counts
     })
@@ -697,10 +845,10 @@ server <- function(input, output, session) {
         dds<-dds_obj()
         gene_counts <- plotCounts(dds, 
                                   gene=input$gene_name, 
-                                  intgroup=input$rna_meta_var1, 
+                                  intgroup=c(input$rna_meta_var1), 
                                   returnData=TRUE)
         
-        ggplot(gene_counts, aes(x = input$rna_meta_var1, y = count, col=input$rna_meta_var1)) +
+        ggplot(data=gene_counts, aes(x = .data[[input$rna_meta_var1]], y = count, col=.data[[input$rna_meta_var1]])) +
             geom_point() +
             scale_color_brewer(palette = "Set1",)+
             theme_classic(base_size = 12)+
@@ -780,9 +928,8 @@ server <- function(input, output, session) {
         return(signifcant_genes)
     })
     
-    switch_plotplot <- eventReactive(input$load_iso, {
+    switch_plotplot <- reactive({
         if (input$load_iso==0){return()}
-        req(input$iso_gene_name)
         exampleSwitchListAnalyzed <- isoform_data()
         isa_genes <- isoform_sig_genes()
         
@@ -791,8 +938,8 @@ server <- function(input, output, session) {
         
     })
     
-    iso_switch_sumplot <- eventReactive(input$load_iso, {
-        if (input$load_iso==0){return()}
+    iso_switch_sumplot <- reactive({
+        #if (input$load_iso==0){return()}
         exampleSwitchListAnalyzed <- isoform_data()
         
         extractSplicingSummary(
@@ -843,34 +990,37 @@ server <- function(input, output, session) {
         return(data.frame(dxr1) %>% na.omit())
     })
     
-    output$exons_table <- renderDataTable({exons_table_tb()})
+    output$exons_table <- renderDataTable({voila_res_all()})
 
-   observeEvent(input$load_exon, {
+   observe({
         if (is.null(exon_data())){return()}
-        
-        output$exons_evaluated <- renderText({
-            dxr1 <- exon_data()
-            return(sum(table ( dxr1$padj < input$exons_pval_thres )))
-        })
-        
-        output$exons_de <- renderText({
-            dxr1 <- exon_data()
-            return(table ( dxr1$padj < input$exons_pval_thres )[2])
-        })
-   
-        output$exons_gene <- renderText({
-            dxr1 <- exon_data()
-            return(sum(table(tapply( dxr1$padj < input$exons_pval_thres, dxr1$groupID, any))))
-        })
-        output$exons_gene_de <- renderText({
-            dxr1 <- exon_data()
-            return(table(tapply(dxr1$padj < input$exons_pval_thres, dxr1$groupID, any))[2])
-        })
+        if (input$tabs=="rna_exon"){
+            output$exons_evaluated <- renderText({
+                dxr1 <- exon_data()
+                return(sum(table ( dxr1$padj < input$exons_pval_thres )))
+            })
+            
+            output$exons_de <- renderText({
+                dxr1 <- exon_data()
+                return(table ( dxr1$padj < input$exons_pval_thres )[2])
+            })
+       
+            output$exons_gene <- renderText({
+                dxr1 <- exon_data()
+                return(sum(table(tapply( dxr1$padj < input$exons_pval_thres, dxr1$groupID, any))))
+            })
+            output$exons_gene_de <- renderText({
+                dxr1 <- exon_data()
+                return(table(tapply(dxr1$padj < input$exons_pval_thres, dxr1$groupID, any))[2])
+            })
+        }
     })
    
-   observeEvent(input$load_exon, {
+   observe({
        sig_exons <- sig_exon_data()
-       updateSelectizeInput(session, "exon_gene_name", label="Select a gene", choices=unique(sig_exons$groupID), server=TRUE)
+       if (input$tabs=="rna_exon"){
+        updateSelectizeInput(session, "exon_gene_name", label="Select a gene", choices=unique(sig_exons$groupID), server=TRUE)
+       }
    })
    
     exons_per_gene_plot <- eventReactive(input$exon_gene_name, {
@@ -1069,6 +1219,8 @@ server <- function(input, output, session) {
     
     output$event_sum <- renderPlot({event_sum_plot()})
     
+    output$majiq_table <- renderDataTable({ majiq.NrGenes.df() })
+        
     majiq.heatmap.df <- reactive({
         majiq.moreThanOneEvent.pos.df <- majiq.moreThanOneEvent.pos()
         majiq.heatmap <- majiq.moreThanOneEvent.pos.df %>% 
@@ -1266,6 +1418,18 @@ server <- function(input, output, session) {
     
     #################### chip quality control ####################
 
+    
+    
+    observeEvent(input$load_encode, {
+        
+            updateSelectInput(session, "fileassembly", "Select an assembly version", choices=unique(ENCODE_metadata$File.assembly))
+    })
+    
+    observeEvent(input$fileassembly, {
+        fas_meta <- ENCODE_metadata %>% dplyr::filter(File.assembly==input$fileassembly) 
+        updateSelectInput(session, "biosample", "Select a sample", choices=unique(fas_meta$Biosample.term.name))
+    })
+    
     filter_encode_meta <- reactive({
         req(input$fileassembly)
         req(input$biosample)
@@ -1287,17 +1451,6 @@ server <- function(input, output, session) {
         
     })
     
-    observe({
-        if (input$tabs=="chip_qc") {
-            updateSelectInput(session, "fileassembly", "Select an assembly version", choices=unique(ENCODE_metadata$File.assembly))
-        }
-    })
-    
-    observeEvent(input$fileassembly, {
-        fas_meta <- ENCODE_metadata %>% dplyr::filter(File.assembly==input$fileassembly) 
-        updateSelectInput(session, "biosample", "Select a sample", choices=unique(fas_meta$Biosample.term.name))
-    })
-    
     output$encode_table <- renderDataTable({
         filter_encode_meta()
     })
@@ -1310,6 +1463,7 @@ server <- function(input, output, session) {
         }
         return(user_chip_name)
     })
+
     
     allchips_obj <- reactive({
         if (input$useexamples_chip==TRUE){
@@ -1323,7 +1477,7 @@ server <- function(input, output, session) {
         input_chips <- filter_encode_meta()
         all.chips <- c()
         for (accession in 1:nrow(input_chips)) {
-            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("examples/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
+            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
         }
         
         all.chips[[user_chip_name]] <- IRanges::reduce(readPeakFile(peakfile = user_chip_file),)
@@ -1331,6 +1485,7 @@ server <- function(input, output, session) {
         for (chip in 1:length(all.chips)){
             all.chips[[chip]]@seqnames <- gsub(pattern = "chr",replacement = "",x = all.chips[[chip]]@seqnames)
         }
+        return(all.chips)
         
     })
     
@@ -1402,6 +1557,7 @@ server <- function(input, output, session) {
     })
     
     plot_gene_track <- reactive({
+        all.chips <- allchips_obj()
         AT = GenomeAxisTrack()
         bm <- get_mart()
         user_chip_name <- chip_name()
@@ -1576,16 +1732,14 @@ server <- function(input, output, session) {
     })
     
     #################### get enrichment result ####################
-    output$check <- renderPrint({ 
-        dexseq.gr.ex.gene.ob()
-        })
     
     get_enrich_results <- function(pos, neg, name, enrichment_results) {
+        all.chips <- allchips_obj()
         obsFreq_interest <- c()
         for (chip in 1:length(all.chips)){
             # freq_bg=length(subsetByOverlaps(gr.gencode.genes,all_chips[[chip]]))
-            freq_as=length(subsetByOverlaps(pos,all.chips[[chip]]))
-            freq_nas=length(subsetByOverlaps(neg,all.chips[[chip]]))
+            freq_as=length(subsetByOverlaps(pos, all.chips[[chip]]))
+            freq_nas=length(subsetByOverlaps(neg, all.chips[[chip]]))
             obsFreq_interest <- as.data.frame(rbind(obsFreq_interest,
                                                     c(as.numeric(freq_as),as.numeric(length(pos))-as.numeric(freq_as),
                                                       as.numeric(freq_nas),as.numeric(length(neg))-as.numeric(freq_nas),
@@ -1694,6 +1848,7 @@ server <- function(input, output, session) {
     
     output$pro_enrichment_plot <- renderPlot({ pro_enrichment_plot_ob() })
     output$enrichment_plot <- renderPlot({ enrichment_plot_ob() })
+    
     #################### download handler #########################
     output$deseq2_pca_down <- downloadHandler(
         filename = function() {paste0("dasire_", "deseq2_pca", ".", input$deseq2_pca_down_ext,  sep="")},
@@ -1821,4 +1976,4 @@ server <- function(input, output, session) {
 
 }
 
-shinyApp(ui, server)
+shinyApp(ui=ui, server=server)
