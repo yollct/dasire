@@ -11,6 +11,7 @@ RUN R -e "tryCatch(install.packages(\"shinycssloaders\", dependencies = TRUE ), 
 RUN R -e "tryCatch(install.packages(\"shinyWidgets\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(install.packages(\"RMariaDB\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(install.packages(\"shinyFiles\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
+RUN R -e "tryCatch(install.packages(\"tippy\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(BiocManager::install(\"reshape2\",ask=FALSE, force=TRUE),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(BiocManager::install(\"ggpubr\",ask=FALSE, force=TRUE),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(BiocManager::install(\"plotly\",ask=FALSE, force=TRUE),  warning = function(w){ stop(\"install command gave a warning\")})"
