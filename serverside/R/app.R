@@ -404,7 +404,7 @@ server <- function(input, output, session) {
                 width=12,
                 height=8,
                 tabPanel("Genome-wide isoform splicing analysis",
-                         div(width=12,
+                         fluidRow(div(width=12,
                              withSpinner(plotOutput("switch_sum"),type=4),
                              div(style = "position: absolute; left: 1em; bottom: 0em;",
                                  dropdown(
@@ -414,9 +414,10 @@ server <- function(input, output, session) {
                                      icon = icon("download", class = "opt"), 
                                      up = TRUE))
                          )),
-                tabPanel("Splicing summary",
-                         div(width=12,
-                             withSpinner(plotOutput("switch_enrich"),type=4))),
+                        fluidRow(div(width=8, withSpinner(plotOutput("splice_genom"),type=4)))),
+                # tabPanel("Splicing summary",
+                #          div(width=12,
+                #              withSpinner(plotOutput("switch_enrich"),type=4))),
                 tabPanel("Gene Switch plots",
                          fluidRow(
                             selectInput("iso_gene_name", "Select a gene", choices=c()),
@@ -1032,7 +1033,18 @@ server <- function(input, output, session) {
     
     splice_enrich_plot <- reactive({
         exampleSwitchListAnalyzed <- isoform_data()
+        extractSplicingEnrichment(
+            exampleSwitchListAnalyzed,
+            splicingToAnalyze='all',
+            returnResult=TRUE,
+            returnSummary=FALSE
+        )
         
+        
+    })
+    
+    splice_genomewide <- reactive({
+        exampleSwitchListAnalyzed <- isoform_data()
         extractSplicingGenomeWide(
             exampleSwitchListAnalyzed,
             featureToExtract = 'all',                 # all isoforms stored in the switchAnalyzeRlist
@@ -1040,10 +1052,9 @@ server <- function(input, output, session) {
             plot=TRUE,
             returnResult=FALSE  # Preventing the summary statistics to be returned as a data.frame
         )
-        
-        
     })
     
+    output$splice_genom <- renderPlot({ splice_genomewide() })
     output$splice_enrich <- renderPlot({ splice_enrich_plot() })
     ######################### DEXSeq ################################
     
