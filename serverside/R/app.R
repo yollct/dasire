@@ -32,6 +32,7 @@ library(Gviz)
 library(ChIPpeakAnno)
 library(shinyFiles)
 library(tippy)
+library(VennDiagram)
 
 source("global.R")
 `%notin%` <- Negate(`%in%`)
@@ -120,11 +121,12 @@ ui <- dashboardPage(
                 fluidRow(
                     column(12,
                         box(width=12,
-                            column(6, h4("Select parameters:"),
-                            selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
-                            selectizeInput("rna_meta_var2", "Select a variable", choices=c())),
-                            column(6, checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
-                            actionButton("load_deseq2", "Load Analysis", icon = icon("play-circle"))),
+                            column(3, h4("Select parameters:"),
+                            fluidRow(selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c())),
+                            fluidRow(selectizeInput("rna_meta_var2", "Select a variable", choices=c()))),
+                            column(3, textInput("log2cutoff", "Set a log2 Fold Change cut off", value=1.5)),
+                            column(3, fluidRow(checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c())),
+                            fluidRow(actionButton("load_deseq2", "Load Analysis", icon = icon("play-circle")))),
                         )
                     )),
                 uiOutput("deseq2_panels")
@@ -153,6 +155,10 @@ ui <- dashboardPage(
             tabItem(
                 tabName="rna_splice",
                 uiOutput("rna_splice_panels")
+            ),
+            tabItem(
+                tabName="com_splice",
+                uiOutput("com_splice_panels")
             ),
             tabItem(
                 tabName="chip_qc",
@@ -202,7 +208,9 @@ server <- function(input, output, session) {
                      menuItem("Isoform switch",
                               tabName="rna_iso"),
                      menuItem("Splicing event",
-                              tabName="rna_splice")
+                              tabName="rna_splice"),
+                    menuItem("Comparative analysis",
+                             tabName="com_splice")
             )
         )
     })
@@ -300,9 +308,8 @@ server <- function(input, output, session) {
                              )
                          ),
                          fluidRow(
-                             withSpinner(
-                                 DT::dataTableOutput("rna_deseq_table"), type=4
-                             ),
+                             div(withSpinner(
+                                 DT::dataTableOutput("rna_deseq_table"), type=4),
                              div(style = "position: absolute; left: 1em; bottom: 0em;",
                                  dropdown(
                                      downloadButton(outputId = "deseq2_table_csv", label = "CSV"),
@@ -311,10 +318,21 @@ server <- function(input, output, session) {
                                      icon = icon("download", class = "opt"), 
                                      up = FALSE
                                  ))
-                             
-                             
+                             )
                          )
-                )
+                ),
+                tabPanel("Splicing factors differential expression",
+                         fluidRow(div(withSpinner(plotlyOutput("sf_deseq2"), type=4),
+                                  div(
+                                      style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                      dropdown(
+                                          selectInput(inputId="sf_deseq2_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                          downloadButton(outputId = "sf_deseq2_down", label = "DOWNLOAD"),
+                                          size = "xs",
+                                          icon = icon("download", class = "opt"), 
+                                          up = TRUE
+                                      )
+                                  ))))
             )
         ))
     })
@@ -538,6 +556,14 @@ server <- function(input, output, session) {
                 tabPanel("Event table",
                     withSpinner(DT::dataTableOutput("majiq_table"), type=4)
                 ))))
+    })
+    
+    output$com_splice_panels <- renderUI({
+        fluidRow(column(12,
+                        tabBox(title="Comparative analysis of splicing analysis tools",
+                               width=12,
+                               tabPanel("Overlap of genes",
+                                        withSpinner(plotOutput("com_spli_venn"), type=4)))))
     })
     
     output$chip_qc_panels <- renderUI({
@@ -895,7 +921,7 @@ server <- function(input, output, session) {
         deg <- data.frame(results(dds, name=input$deseq_result))
         
         ggplot(data=deg,aes(x=log2FoldChange,y=-log10(padj))) +
-            geom_vline(xintercept=c(-log2(1.5),log2(1.5)), color="red")+ 
+            geom_vline(xintercept=c(-log2(as.numeric(input$log2cutoff)),log2(as.numeric(input$log2cutoff))), color="red")+ 
             geom_hline(yintercept=-log10(0.05), color="blue")+ 
             geom_point(color="black",alpha=0.5,stat="identity")+
             xlim(-10,10)
@@ -915,6 +941,33 @@ server <- function(input, output, session) {
     })
     
     output$rna_deseq_table <- DT::renderDataTable({rna_deseq_res_table()})
+    
+    sf_deseq2_plot <- reactive({
+        sf_genes<- read.delim(file = "examples/splicing_factors_list.txt")
+        
+        if (input$useexamples==TRUE){
+            degs<-read.table(file = "examples/gene_counts/degs_deseq2.txt",header = TRUE,sep = "\t")
+            degs$ensembl_gene_id <- gsub(pattern = "\\..*$",replacement = "",x=degs$ensembl_gene_id_version)
+            mart_export <-  mart_export_obj()
+            
+            degs <- dplyr::left_join(degs,mart_export,by="ensembl_gene_id")
+
+        }
+        
+        heatmap_sf <- degs[degs$external_gene_name %in% sf_genes$Gene,]
+        heatmap_sf$padj[is.na(heatmap_sf$padj)] <- 1
+        ggplotly(ggplot(data=heatmap_sf,aes(x=log2FoldChange, y=external_gene_name, size = 1-padj,color=log2FoldChange, text=paste0("SF: ", external_gene_name))) +
+            geom_point() +
+            # xlim(-1,1)+
+            # scale_size(range = c(1, 10), name="padj")+
+            theme_classic()+
+            geom_vline(xintercept=c(-log2(as.numeric(input$log2cutoff)),log2(as.numeric(input$log2cutoff))), color="black")+
+            scale_color_gradient2(midpoint=0, low="#313695", mid="#FFFFBF",
+                                  high="#A50026", space ="Lab" ))
+            
+    })
+    
+    output$sf_deseq2 <- renderPlotly({ sf_deseq2_plot() })
     
     ######################### isoform switch ###########################
     
@@ -1296,6 +1349,32 @@ server <- function(input, output, session) {
         majiq_heatmap_plot()
     })
     
+    com_spli_venn_plot <- reactive({
+        ### from isa
+        genes.iso <- read.delim(file = "examples/pseudocounts/isoform_signifcant_genes.txt")
+        genes.iso <- unique(genes.iso$gene_id)
+        
+        ### from dexseq
+        dxr1 <- exon_data()
+        genes.exo <- as.data.frame(dxr1) %>%
+            dplyr::filter(padj <  input$exons_pval_thres )
+        genes.exo <- unique(genes.exo$groupID)
+        
+        ### from majiq
+        genes.majiq <- voila_res()
+        genes.majiq <- unique(genes.majiq$Gene.ID)
+        
+        venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
+                                               IsoformSwitchAnalyzer=genes.iso,
+                                               Majiq=genes.majiq),
+                                      filename = NULL,
+                                      col="black",
+                                      fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
+        
+        grid.newpage(); grid::grid.draw(venn.splicing)
+    })
+    
+    output$com_spli_venn <- renderPlot({ com_spli_venn_plot() })
     ######################### observer #################################
     
     observeEvent(input$renderimport_rna, {
@@ -1886,7 +1965,11 @@ server <- function(input, output, session) {
     output$deseq2_hm_down <- downloadHandler(
         filename = function() {paste0("dasire_", "deseq2_heatmap", ".", input$deseq2_hm_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot = rnaheatmap(), device = input$deseq2_hm_down_ext, width = 10)})
-
+    
+    output$sf_deseq2_down <- downloadHandler(
+        filename = function() {paste0("dasire_", "sf_deseq2", ".", input$sf_deseq2_down_ext,  sep="")},
+        content = function(file) {ggsave(file, plot = sf_deseq2_plot(), device = input$sf_deseq2_down_ext, width = 10)})
+    
     output$deseq2_gc_down <- downloadHandler(
         filename = function() {paste0("dasire_", "rna_gc", ".", input$deseq2_gc_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot = rna_genecount_plot(), device = input$deseq2_gc_down_ext, width = 10)})
