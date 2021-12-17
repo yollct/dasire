@@ -31,6 +31,8 @@ library(biomaRt)
 library(Gviz)
 library(ChIPpeakAnno)
 library(shinyFiles)
+library(tippy)
+library(VennDiagram)
 
 source("global.R")
 `%notin%` <- Negate(`%in%`)
@@ -80,9 +82,11 @@ ui <- dashboardPage(
                             column(12,
                                    box(
                                        title="Upload sample data",
-                                       div(h4("Check to use our example data and press the upload button."),
+                                       div(h4(HTML("<b>Example data</b>"),span(shiny::icon("info-circle"), id = "rna_ex")),
+                                           tippy::tippy_this(elementId = "rna_ex",tooltip = "Check to use our example data and press the upload button.",placement = "right"),
                                            checkboxInput(inputId="useexamples", label="Use example data", value=TRUE),
-                                           h4("Please input the preprocessing output directory."),
+                                           h4(HTML("<b>Choose your directory</b>"),span(shiny::icon("info-circle"), id = "rna_dir")),
+                                           tippy::tippy_this(elementId = "rna_dir",tooltip = "Please input the preprocessing output directory",placement = "right"),
                                            shinyDirButton("dir", "Input directory", "Upload"),
                                        div(
                                            actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
@@ -91,9 +95,11 @@ ui <- dashboardPage(
                                    box(
                                        title="Upload ChIP data",
                                        div(
-                                           h4("Check to use our example data and press the upload button."),
+                                           h4(HTML("<b>Example data</b>"),span(shiny::icon("info-circle"), id = "chip_ex")),
+                                           tippy::tippy_this(elementId = "chip_ex",tooltip = "Check to use our example data and press the upload button.",placement = "right"),
                                            checkboxInput(inputId="useexamples_chip", label="Use example data", value=TRUE),
-                                           h4("Please input the preprocessing output directory."),
+                                           h4(HTML("<b>Choose your directory</b>"),span(shiny::icon("info-circle"), id = "xhip_dir")),
+                                           tippy::tippy_this(elementId = "chip_dir",tooltip = "Please input the preprocessing output directory",placement = "right"),
                                            fileInput(inputId = "chipseq_bed", label="Choose your ChIPseq bed file"),
                                            actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
                                        )
@@ -115,11 +121,12 @@ ui <- dashboardPage(
                 fluidRow(
                     column(12,
                         box(width=12,
-                            h4("Select parameters:"),
-                            selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c()),
-                            selectizeInput("rna_meta_var2", "Select a variable", choices=c()),
-                            checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c()),
-                            actionButton("load_deseq2", "Load Analysis", icon = icon("play-circle")),
+                            column(3, h4("Select parameters:"),
+                            fluidRow(selectInput("rna_meta_var1", "Select condition (choose 'time')", choices=c())),
+                            fluidRow(selectizeInput("rna_meta_var2", "Select a variable", choices=c()))),
+                            column(3, textInput("log2cutoff", "Set a log2 Fold Change cut off", value=1.5)),
+                            column(3, fluidRow(checkboxGroupInput("rna_samples", "Select samples for analysis.", choices = c())),
+                            fluidRow(actionButton("load_deseq2", "Load Analysis", icon = icon("play-circle")))),
                         )
                     )),
                 uiOutput("deseq2_panels")
@@ -137,10 +144,10 @@ ui <- dashboardPage(
                 fluidRow(
                     column(12,
                         box(width=12,
-                            h4("Select parameters:"),
-                            textInput("exons_pval_thres", "Select a p-value threshold", value = 0.1),
-                            textInput("exons_fc_thres", "Select a fold change threshold", value = 1.5),
-                            actionButton("load_exon", "Load Analysis", icon = icon("play-circle"))
+                            column(3,h4("Select parameters:")),
+                            column(3,textInput("exons_pval_thres", "Select a p-value threshold", value = 0.1)),
+                            column(3, textInput("exons_fc_thres", "Select a fold change threshold", value = 1.5)),
+                            column(3, actionButton("load_exon", "Load Analysis", icon = icon("play-circle")))
                         )
                     )),
                 uiOutput("rna_exon_panels")
@@ -150,11 +157,27 @@ ui <- dashboardPage(
                 uiOutput("rna_splice_panels")
             ),
             tabItem(
+                tabName="com_splice",
+                uiOutput("com_splice_panels")
+            ),
+            tabItem(
                 tabName="chip_qc",
+                fluidRow(column(12,box(
+                    column(4, selectInput("fileassembly", label="Choose an assembly version", choices=c())),
+                    column(4, selectInput("biosample", label="Choose a sample", choices=c())),
+                    column(4, actionButton("load_encode", "Load ENCODE DATA")),
+                    )
+                )),
                 uiOutput("chip_qc_panels")
             ),
             tabItem(
                 tabName = "peak_enr",
+                fluidRow(column(12,box(width=12,
+                    column(3, box(textOutput("show_fileassembly"), p("Current assembly version"))),
+                    column(3, box(textOutput("show_biosample"), p("Current biosample"))),
+                    column(3, actionButton("run_enr", "Run enrichment"))
+                )
+                )),
                 uiOutput("chip_peak_panels")
             )
         )
@@ -185,7 +208,9 @@ server <- function(input, output, session) {
                      menuItem("Isoform switch",
                               tabName="rna_iso"),
                      menuItem("Splicing event",
-                              tabName="rna_splice")
+                              tabName="rna_splice"),
+                    menuItem("Comparative analysis",
+                             tabName="com_splice")
             )
         )
     })
@@ -215,7 +240,7 @@ server <- function(input, output, session) {
                 width=12,
                 height=8,
                 tabPanel("PCA",
-                         box(
+                         column(6,div(
                              withSpinner(plotlyOutput("rna_pca"), type=4),
                              div(
                                  style = "position: absolute; left: 1em; bottom: 0.5em;",
@@ -227,8 +252,8 @@ server <- function(input, output, session) {
                                      up = TRUE
                                  )
                              )
-                         ),
-                         box(
+                         )),
+                         column(6, div(
                              withSpinner(
                                  plotOutput("rna_heatmap"), type=4
                              ),
@@ -242,11 +267,11 @@ server <- function(input, output, session) {
                                      up = TRUE
                                  )
                              )
-                         )
+                         ))
                          
                 ),
                 tabPanel("Gene Normalized Counts",
-                         box(
+                         column(6, div(
                              selectizeInput("gene_name", label = "Gene", choices = c()),
                              withSpinner(
                                  plotOutput("rna_genecount"), type=4
@@ -261,10 +286,10 @@ server <- function(input, output, session) {
                                      up = TRUE
                                  )
                              )
-                         ),
+                         )),
                 ),
                 tabPanel("DESeq2 result",
-                         box(
+                         fluidRow(
                              div(
                                  selectInput("deseq_result", label = "Result", choices = c()),
                                  withSpinner(
@@ -282,10 +307,9 @@ server <- function(input, output, session) {
                                  )
                              )
                          ),
-                         div(
-                             withSpinner(
-                                 DT::dataTableOutput("rna_deseq_table"), type=4
-                             ),
+                         fluidRow(
+                             div(withSpinner(
+                                 DT::dataTableOutput("rna_deseq_table"), type=4),
                              div(style = "position: absolute; left: 1em; bottom: 0em;",
                                  dropdown(
                                      downloadButton(outputId = "deseq2_table_csv", label = "CSV"),
@@ -294,10 +318,21 @@ server <- function(input, output, session) {
                                      icon = icon("download", class = "opt"), 
                                      up = FALSE
                                  ))
-                             
-                             
+                             )
                          )
-                )
+                ),
+                tabPanel("Splicing factors differential expression",
+                         fluidRow(div(withSpinner(plotlyOutput("sf_deseq2"), type=4),
+                                  div(
+                                      style = "position: absolute; left: 1em; bottom: 0.5em;",
+                                      dropdown(
+                                          selectInput(inputId="sf_deseq2_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                          downloadButton(outputId = "sf_deseq2_down", label = "DOWNLOAD"),
+                                          size = "xs",
+                                          icon = icon("download", class = "opt"), 
+                                          up = TRUE
+                                      )
+                                  ))))
             )
         ))
     })
@@ -308,8 +343,7 @@ server <- function(input, output, session) {
                 id="Quality control",
                 width=12,
                 tabPanel("STAR alignment",
-                         box(
-                             actionButton("load_qc", "Load Analysis", icon = icon("play-circle")),
+                         column(6,div(
                              withSpinner(
                                  plotOutput("star_qc_percentplot"), type=4
                              ),
@@ -323,8 +357,8 @@ server <- function(input, output, session) {
                                      up = TRUE
                                  )
                              )
-                         ),
-                         box(
+                         )),
+                         column(6, div(
                              withSpinner(
                                  plotOutput("star_qc_readlenplot"), type=4
                              ), 
@@ -338,11 +372,11 @@ server <- function(input, output, session) {
                                      up = TRUE
                                  )
                              )
-                         )
+                         ))
                 ),
                 tabPanel("Kallisto pseudoalignment",
                          width=12,
-                         box(
+                         div(
                              width=6,
                              withSpinner(
                                  plotOutput("kallisto_percentplot"), type=4
@@ -370,7 +404,7 @@ server <- function(input, output, session) {
                 width=12,
                 height=8,
                 tabPanel("Genome-wide isoform splicing analysis",
-                         box(width=12,
+                         fluidRow(div(width=12,
                              withSpinner(plotOutput("switch_sum"),type=4),
                              div(style = "position: absolute; left: 1em; bottom: 0em;",
                                  dropdown(
@@ -380,10 +414,16 @@ server <- function(input, output, session) {
                                      icon = icon("download", class = "opt"), 
                                      up = TRUE))
                          )),
+                        fluidRow(div(width=8, withSpinner(plotOutput("splice_genom"),type=4)))),
+                # tabPanel("Splicing summary",
+                #          div(width=12,
+                #              withSpinner(plotOutput("switch_enrich"),type=4))),
                 tabPanel("Gene Switch plots",
-                         div(
-                            actionButton("load_iso", "Load"),
+                         fluidRow(
                             selectInput("iso_gene_name", "Select a gene", choices=c()),
+                            actionButton("load_iso", "Load"))
+                            ,
+                         fluidRow(
                             withSpinner(
                                  plotOutput("switch_plot"), type=4
                              ),
@@ -486,8 +526,7 @@ server <- function(input, output, session) {
                 title="Splicing events",
                 width=12,
                 tabPanel("Number of events",
-                         actionButton("load_majiq", "Load Analysis", icon = icon("play-circle")),
-                         box(width=6,
+                         column(width=6,
                              withSpinner(
                                  plotOutput("event_sum"),type=4
                              ),
@@ -501,7 +540,7 @@ server <- function(input, output, session) {
                                      up = TRUE))
                              
                          ),
-                         box(width=6,
+                         column(width=6,
                              withSpinner(
                                  plotOutput("majiq_heatmap"), type=4
                              ),
@@ -520,19 +559,20 @@ server <- function(input, output, session) {
                 ))))
     })
     
+    output$com_splice_panels <- renderUI({
+        fluidRow(column(12,
+                        tabBox(title="Comparative analysis of splicing analysis tools",
+                               width=12,
+                               tabPanel("Overlap of genes",
+                                        withSpinner(plotOutput("com_spli_venn"), type=4)))))
+    })
+    
     output$chip_qc_panels <- renderUI({
         fluidRow(column(12,
             tabBox(
                 title="ChIP-Seq ENCODE",
                 width=12,
                 tabPanel("ENCODE table",
-                         column(
-                             width=6,
-                             actionButton("load_encode", "Load ENCODE DATA"),
-                             selectInput("fileassembly", label="Choose an assembly version", choices=c()),
-                             selectInput("biosample", label="Choose a sample", choices=c())
-                             
-                         ),
                          withSpinner(
                              DT::dataTableOutput("encode_table"), type=4
                          ),
@@ -546,7 +586,7 @@ server <- function(input, output, session) {
                                  up = FALSE))
                          
                 ),
-                tabPanel("Vis peaks",
+                tabPanel("Peaks visualization",
                          withSpinner(
                              plotOutput("bedpeaks"), type=4
                          ),
@@ -586,7 +626,6 @@ server <- function(input, output, session) {
                 title="ChIP-seq peak enrichment",
                 width=12,
                 tabPanel("Gene level peak enrichment",
-                         actionButton("chip_enr_refresh", label="Load Analysis"),
                          withSpinner(
                              plotOutput("enrichment_plot"),type=4
                          ),div(
@@ -601,7 +640,6 @@ server <- function(input, output, session) {
                          ,
                          verbatimTextOutput("check")),
                 tabPanel("Promoter level peak enrichment",
-                         actionButton("chip_proenr_refresh", label="Load Analysis"),
                          withSpinner(
                              plotOutput("pro_enrichment_plot"), type=4
                          ),
@@ -884,7 +922,7 @@ server <- function(input, output, session) {
         deg <- data.frame(results(dds, name=input$deseq_result))
         
         ggplot(data=deg,aes(x=log2FoldChange,y=-log10(padj))) +
-            geom_vline(xintercept=c(-log2(1.5),log2(1.5)), color="red")+ 
+            geom_vline(xintercept=c(-log2(as.numeric(input$log2cutoff)),log2(as.numeric(input$log2cutoff))), color="red")+ 
             geom_hline(yintercept=-log10(0.05), color="blue")+ 
             geom_point(color="black",alpha=0.5,stat="identity")+
             xlim(-10,10)
@@ -904,6 +942,33 @@ server <- function(input, output, session) {
     })
     
     output$rna_deseq_table <- DT::renderDataTable({rna_deseq_res_table()})
+    
+    sf_deseq2_plot <- reactive({
+        sf_genes<- read.delim(file = "examples/splicing_factors_list.txt")
+        
+        if (input$useexamples==TRUE){
+            degs<-read.table(file = "examples/gene_counts/degs_deseq2.txt",header = TRUE,sep = "\t")
+            degs$ensembl_gene_id <- gsub(pattern = "\\..*$",replacement = "",x=degs$ensembl_gene_id_version)
+            mart_export <-  mart_export_obj()
+            
+            degs <- dplyr::left_join(degs,mart_export,by="ensembl_gene_id")
+
+        }
+        
+        heatmap_sf <- degs[degs$external_gene_name %in% sf_genes$Gene,]
+        heatmap_sf$padj[is.na(heatmap_sf$padj)] <- 1
+        ggplotly(ggplot(data=heatmap_sf,aes(x=log2FoldChange, y=external_gene_name, size = 1-padj,color=log2FoldChange, text=paste0("SF: ", external_gene_name))) +
+            geom_point() +
+            # xlim(-1,1)+
+            # scale_size(range = c(1, 10), name="padj")+
+            theme_classic()+
+            geom_vline(xintercept=c(-log2(as.numeric(input$log2cutoff)),log2(as.numeric(input$log2cutoff))), color="black")+
+            scale_color_gradient2(midpoint=0, low="#313695", mid="#FFFFBF",
+                                  high="#A50026", space ="Lab" ))
+            
+    })
+    
+    output$sf_deseq2 <- renderPlotly({ sf_deseq2_plot() })
     
     ######################### isoform switch ###########################
     
@@ -965,6 +1030,32 @@ server <- function(input, output, session) {
     })
     
     output$switch_table <- renderDataTable({switch_table_tb()})
+    
+    splice_enrich_plot <- reactive({
+        exampleSwitchListAnalyzed <- isoform_data()
+        extractSplicingEnrichment(
+            exampleSwitchListAnalyzed,
+            splicingToAnalyze='all',
+            returnResult=TRUE,
+            returnSummary=FALSE
+        )
+        
+        
+    })
+    
+    splice_genomewide <- reactive({
+        exampleSwitchListAnalyzed <- isoform_data()
+        extractSplicingGenomeWide(
+            exampleSwitchListAnalyzed,
+            featureToExtract = 'all',                 # all isoforms stored in the switchAnalyzeRlist
+            splicingToAnalyze = c('A3','MES','ATSS'), # Splice types significantly enriched in COAD
+            plot=TRUE,
+            returnResult=FALSE  # Preventing the summary statistics to be returned as a data.frame
+        )
+    })
+    
+    output$splice_genom <- renderPlot({ splice_genomewide() })
+    output$splice_enrich <- renderPlot({ splice_enrich_plot() })
     ######################### DEXSeq ################################
     
     exon_data <- reactive({
@@ -1269,6 +1360,32 @@ server <- function(input, output, session) {
         majiq_heatmap_plot()
     })
     
+    com_spli_venn_plot <- reactive({
+        ### from isa
+        genes.iso <- read.delim(file = "examples/pseudocounts/isoform_signifcant_genes.txt")
+        genes.iso <- unique(genes.iso$gene_id)
+        
+        ### from dexseq
+        dxr1 <- exon_data()
+        genes.exo <- as.data.frame(dxr1) %>%
+            dplyr::filter(padj <  input$exons_pval_thres )
+        genes.exo <- unique(genes.exo$groupID)
+        
+        ### from majiq
+        genes.majiq <- voila_res()
+        genes.majiq <- unique(genes.majiq$Gene.ID)
+        
+        venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
+                                               IsoformSwitchAnalyzer=genes.iso,
+                                               Majiq=genes.majiq),
+                                      filename = NULL,
+                                      col="black",
+                                      fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
+        
+        grid.newpage(); grid::grid.draw(venn.splicing)
+    })
+    
+    output$com_spli_venn <- renderPlot({ com_spli_venn_plot() })
     ######################### observer #################################
     
     observeEvent(input$renderimport_rna, {
@@ -1329,7 +1446,7 @@ server <- function(input, output, session) {
         return(alignment_stats_star)
     })
     
-    star_qc_plot <- eventReactive(input$load_qc, {
+    star_qc_plot <- reactive({
         alignment_stats_star <- star_qc()
         alignment_stats_star$value <- as.numeric(alignment_stats_star$value)
         
@@ -1352,7 +1469,7 @@ server <- function(input, output, session) {
 
     })
     
-    star_qc_readlength <- eventReactive(input$load_qc, {
+    star_qc_readlength <- reactive({
         alignment_stats_star <- star_qc()
         alignment_stats_star$value <- as.numeric(alignment_stats_star$value)
         
@@ -1383,7 +1500,7 @@ server <- function(input, output, session) {
         star_qc_readlength()
     })
     
-    pseudo_qc <- eventReactive(input$load_qc, {
+    pseudo_qc <- reactive({
         if (input$useexamples == TRUE){
             alignment_stats_kallisto <- read.csv("examples/multiqc_data/multiqc_kallisto.txt",header = TRUE,sep = "\t")
             alignment_stats_kallisto <- melt(data = alignment_stats_kallisto,id.vars="Sample")#,"total_reads","avg_input_read_length"))
@@ -1392,7 +1509,7 @@ server <- function(input, output, session) {
         return(alignment_stats_kallisto)
     })
     
-    pseudo_qc_plot <- eventReactive(input$load_qc, {
+    pseudo_qc_plot <- reactive({
         alignment_stats_kallisto <- pseudo_qc()
         alignment_stats_kallisto %>%
             dplyr::filter(grepl(pattern = "percent",x = alignment_stats_kallisto$variable)) %>%
@@ -1467,7 +1584,7 @@ server <- function(input, output, session) {
     
     allchips_obj <- reactive({
         if (input$useexamples_chip==TRUE){
-            user_chip_file  <- "/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz"
+            user_chip_file  <- "examples/encode_bedNarrowPeak_files/ENCFF520DIY.bed.gz"
             
         } else {
             user_chip_file <- input$chipseq_bed
@@ -1477,7 +1594,7 @@ server <- function(input, output, session) {
         input_chips <- filter_encode_meta()
         all.chips <- c()
         for (accession in 1:nrow(input_chips)) {
-            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("/localscratch/marisol/DASiRe/databases/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
+            all.chips[[input_chips$Experiment.target[accession]]] <- IRanges::reduce(readPeakFile(peakfile = paste0("examples/encode_bedNarrowPeak_files/",input_chips$File.accession[accession],".bed.gz")))
         }
         
         all.chips[[user_chip_name]] <- IRanges::reduce(readPeakFile(peakfile = user_chip_file),)
@@ -1544,7 +1661,7 @@ server <- function(input, output, session) {
     })
     
     mart_export_obj <- reactive({
-        mart_export <- read.table(file = "/localscratch/marisol/DASiRe/databases/mart_export.txt",sep = "\t",header = T)
+        mart_export <- read.table(file = "examples/mart_export.txt",sep = "\t",header = T)
         mart_export$chromosome_name <- paste0("chr",mart_export$chromosome_name)
         return(mart_export)
     })
@@ -1819,7 +1936,7 @@ server <- function(input, output, session) {
         return(enrichment_results)
     })
     
-    enrichment_plot_ob <- eventReactive(input$chip_enr_refresh, {
+    enrichment_plot_ob <- eventReactive(input$run_enr, {
         ht_data <- get_gene_enrichment()
         ht_data$pvalue[as.numeric(ht_data$pvalue) > 0.05] <- NA
         ht_data$pvalue[as.numeric(ht_data$estimate) == "Inf"] <- NA
@@ -1833,7 +1950,7 @@ server <- function(input, output, session) {
         
     })
     
-    pro_enrichment_plot_ob <- eventReactive(input$chip_proenr_refresh, {
+    pro_enrichment_plot_ob <- eventReactive(input$run_enr, {
         ht_data <- get_promoter_enrichment()
         ht_data$pvalue[as.numeric(ht_data$pvalue) > 0.05] <- NA
         ht_data$pvalue[as.numeric(ht_data$estimate) == "Inf"] <- NA
@@ -1848,6 +1965,8 @@ server <- function(input, output, session) {
     
     output$pro_enrichment_plot <- renderPlot({ pro_enrichment_plot_ob() })
     output$enrichment_plot <- renderPlot({ enrichment_plot_ob() })
+    output$show_fileassembly <- renderText({ input$fileassembly })
+    output$show_biosample <- renderText({ input$biosample })
     
     #################### download handler #########################
     output$deseq2_pca_down <- downloadHandler(
@@ -1857,7 +1976,11 @@ server <- function(input, output, session) {
     output$deseq2_hm_down <- downloadHandler(
         filename = function() {paste0("dasire_", "deseq2_heatmap", ".", input$deseq2_hm_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot = rnaheatmap(), device = input$deseq2_hm_down_ext, width = 10)})
-
+    
+    output$sf_deseq2_down <- downloadHandler(
+        filename = function() {paste0("dasire_", "sf_deseq2", ".", input$sf_deseq2_down_ext,  sep="")},
+        content = function(file) {ggsave(file, plot = sf_deseq2_plot(), device = input$sf_deseq2_down_ext, width = 10)})
+    
     output$deseq2_gc_down <- downloadHandler(
         filename = function() {paste0("dasire_", "rna_gc", ".", input$deseq2_gc_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot = rna_genecount_plot(), device = input$deseq2_gc_down_ext, width = 10)})
