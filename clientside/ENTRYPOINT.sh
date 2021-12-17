@@ -10,7 +10,7 @@ gunzip $i
 done
 wait
 
-echo "step 1 of 6: Building indeces for STAR and Kallisto"
+echo "step 1 of 4: Building indeces for STAR and Kallisto"
 # -[ ] check if indeces are already built
 echo "Indexing reference genome with STAR"
 mkdir -p /MOUNT/index/starindex
@@ -34,25 +34,20 @@ kallisto index -i /MOUNT/index/kallisto-index $transcripts_fasta
 # # -[ ]  check if fastqcount is 2| 0: check input name | case: greater: single  # currently assuming paired
 
 
-echo "step 2 of 6: trimming reads for Sample: $i  & Aligning to the genome with STAR"
+echo "step 2 of 4: trimming reads for Sample: $i  & Aligning to the genome with STAR & Kallisto"
 # trimmomatic PE input/${i}1.fastq input/${i}2.fastq output/${i}r1_trimmed.fastq.gz output/${i}r1_unpaired.fastq.gz output/${i}r2_trimmed.fastq.gz output/${i}r2_unpaired.fastq.gz ILLUMINACLIP:$adapters:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
+do echo "Genome Alignment with STAR for Sample: $i"
 # STAR --genomeDir /MOUNT/index/starindex --readFilesIn output/${i}r1_trimmed.fastq.gz output/${i}r2_trimmed.fastq.gz --outSAMattributes NH HI AS nM NM MD --outSAMtype BAM SortedByCoordinate --outReadsUnmapped Fastxm --outFileNamePrefix output/$i
-# done
-# wait
 
-
-echo "step 3 of 6: Pseudoaligning with kallisto"
-mkdir output/pseudocounts
-
-# for i in $(find input/ -name "output/${i}r?_trimmed.fastq" | sed 's/r._trimmed.fastq//g' )
-# do echo "Transcript quantification with Kallisto for Sample: $i"
+do echo "Transcript quantification with Kallisto for Sample: $i"
 # kallisto quant -i /MOUNT/index/kallisto-index -o pseudocounts/$i --bias ${i}r1_trimmed.fastq ${i}r2_trimmed.fastq
 # done
 
 
+
 mkdir output/exon_counts
-echo "step 4 of 6: Quantifying exons with DEXSeq and AS Events with Majiq"
+echo "step 3 of 4: Quantifying exons with DEXSeq and AS Events with Majiq"
 # for i in $(find output/ -name "*.bam" -nowarn  )
 # do
 # 	echo "indexing $i"
@@ -90,7 +85,7 @@ echo "step 4 of 6: Quantifying exons with DEXSeq and AS Events with Majiq"
 
 
 
-echo "step 5 of 6: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
+echo "step 4 of 4: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
 #Rscript deseq2_dexseq_isoformswicthanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
 
 echo "All finished visit https://exbio.wzw.tum.de/dasire/ for your next steps. Upload files from directory MOUNT/output to the webserver."
