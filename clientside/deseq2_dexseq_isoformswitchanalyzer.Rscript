@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+# #!/usr/bin/env Rscript
 library(optparse)
 
 option_list = list(
@@ -50,9 +50,9 @@ print("###################")
 library(dplyr)
 library(Rsubread)
 
-bamfiles <- list.files(bamdir,pattern = ".bam$")
 file.exists(bamdir,bamfiles) #Verify that the bam files exist
 file.exists(gtffile) #Verify that the gtf files exist
+bamfiles <- list.files(bamdir,pattern = ".bam$")
 dir.create(path = paste0(outdir,"gene_counts/"))
 
 if (layoutbam=="single"){

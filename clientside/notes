@@ -1,0 +1,63 @@
+
+## libraries
+
+mamba install -c conda-forge r-dplyr r-plyr  r-optparse
+mamba install -c bioconda bioconductor-dexseq bioconductor-isoformswitchanalyzer bioconductor-deseq2  bioconductor-rsubread
+mamba install -c r r-reshape2
+
+- trimmomatic-0.39.jar 
+- STAR
+- samtools
+- python dexseq_count.py
+- kallisto
+
+ ## files.
+1. trimmomatic - adapters.fa.
+2. STAR - gtf genome_fasta
+3. Dexseq - exon_custom_annotation.da
+4. Kallisto - transcript_fasta
+
+## Marisol's files
+2) gtf and genome fasta --> gencode.v36.annotation.gtf and GRCh38.primary_assembly.genome.fa, the genome index to run STAR is the folder called genome in the same dir
+3) DEXseq --> gencode.v36.annotation.dexseq.gff
+4) kallisto --> gencode.v36.transcripts.fa and the index is transcripts_index in the same dir
+5) The fastq files are in /localscratch/marisol/DASiRe/
+- ENCFF239POR_1.fastq
+- ENCFF239POR_2.fastq
+...
+6.)metadata for Rscript -->  /localscratch/marisol/DASiRe/metadata.txt
+7.)adapters --> databases/gencode_annotation_files/adapters_pe.fa
+
+## Running outputs
+...sorting Suffix Array chunks and saving them to disk..
+├── config.sh
+├── ENTRYPOINT.sh
+├── index
+│   └── starindex
+│       ├── chrLength.txt
+│       ├── chrNameLength.txt
+│       ├── chrName.txt
+│       ├── chrStart.txt
+│       ├── exonGeTrInfo.tab
+│       ├── exonInfo.tab
+│       ├── geneInfo.tab
+│       ├── Log.out
+│       ├── sjdbList.fromGTF.out.tab
+│       └── transcriptInfo.tab
+├── input
+│   ├── adapters_pe.fa
+│   ├── ENCFF239POR_1.fastq
+│   ├── ENCFF239POR_2.fastq
+│   ├── ENCFF250AJS_1.fastq
+│   ├── ENCFF250AJS_2.fastq
+│   ├── ENCFF301JRH_1.fastq
+│   ├── ENCFF301JRH_2.fastq
+│   ├── ENCFF803NZJ_1.fastq
+│   ├── ENCFF803NZJ_2.fastq
+│   ├── gencode.v36.annotation.dexseq.gff
+│   ├── gencode.v36.annotation.gtf
+│   ├── gencode.v36.transcripts.fa
+│   ├── GRCh38.primary_assembly.genome.fa
+│   └── metadata.txt
+└── output
+    └── STAR [error opening dir]

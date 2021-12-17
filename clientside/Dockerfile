@@ -1,7 +1,7 @@
 FROM bmennis/majiq:latest
 
 #Installing Conda 
-ENV PATH /opt/conda/bin:$PATH
+ENV PATH /opt/conda/lib/R/library/DEXSeq/python_scripts:/opt/conda/bin:$PATH
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py39_4.10.3-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
@@ -28,8 +28,9 @@ RUN mamba install -c r r-reshape2 -y
 RUN mamba install -c conda-forge r-dplyr r-plyr  r-optparse -y
 RUN mamba install -c bioconda bioconductor-dexseq bioconductor-isoformswitchanalyzer bioconductor-deseq2 trimmomatic bioconductor-rsubread kallisto star -y
 
+WORKDIR /MOUNT
 
 #ENTRYPOINT SCRIPT
-# COPY [--chown=nobody:nogroup] ./ENTRYPOINT.sh /docker_main/ENTRYPOINT.sh
+COPY [--chown=nobody:nogroup] ./ENTRYPOINT.sh /ENTRYPOINT.sh
 # RUN chmod 777 /docker_main/ENTRYPOINT.sh
 # ENTRYPOINT ["/docker_main/ENTRYPOINT.sh"]
