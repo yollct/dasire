@@ -69,8 +69,9 @@ ui <- dashboardPage(
         ),
         tabItems(
             tabItem(tabName="about_tab",
-                    actionButton("download_raw_data", "Download data")),
-                    uiOutput("about_page"),
+                    h4("Download example data here: "),
+                    downloadButton("download_raw_data", "Download data"),
+                    uiOutput("about_page")),
                     
             tabItem(tabName = "docs",
                     uiOutput("doc_page")),
@@ -215,10 +216,12 @@ server <- function(input, output, session) {
         includeHTML("documentation/tutorial.html")
     })
     
-    observeEvent(input$tab, {
-        updateTabItems(session, "tabs", input$tab)
-    })
+    output$download_raw_data <- downloadHandler(filename=function(){"example_data.zip"},
+                                            content = function(file){
+                                                file.copy("examples/example_data.zip", file)
+                                            })
     
+
     output$rnaseq_page <- renderMenu({
         #show menu only if rnaseq data uploaded
         if(input$renderimport_rna == 0) return()
@@ -730,6 +733,11 @@ server <- function(input, output, session) {
     observeEvent(input$renderimport_rna, {
         showModal(import_data_modal())
     })
+    
+    observeEvent(input$ok_import_rna,{
+        removeModal()
+    })
+    
     
     deseqlevel <- function(failed=F){
         if (is.null(input$rna_meta_var1)){
@@ -1433,10 +1441,7 @@ server <- function(input, output, session) {
         updateSelectizeInput(session, "iso_gene_name", "Select a gene with switches", choices=unique(x$gene_name), server=TRUE)
     })
     
-    observeEvent(input$ok_import_rna,{
-        removeModal()
-    })
-    
+
     observe({
         if (input$tabs=="deseq2") {
             updateSelectInput(session, "rna_meta_var1", "Select condition column", choices=colnames(rnameta_df()), selected=colnames(rnameta_df())[2])
