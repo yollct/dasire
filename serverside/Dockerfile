@@ -45,6 +45,7 @@ RUN wget https://raw.githubusercontent.com/rocker-org/shiny/master/shiny-server.
 COPY /R/examples/encode_bedNarrowPeak_files/ /examples/databases/
 COPY /R/examples/mart_export.txt /databases/
 COPY /R/examples/splicing_factors_list.txt /examples/databases/
+
 RUN chmod 777 /databases -R
 
 EXPOSE 3838

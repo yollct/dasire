@@ -1,7 +1,7 @@
 ---
 title: "DASiRe"
 output: 
-  html_document:
+  html_fragment: 
     toc: true
 ---
 
@@ -15,7 +15,7 @@ DASiRe is an accessible web-based platform that performs the analysis of raw RNA
 
 The main workflow consists of three main steps: 
 
-![](overview.png)
+![alt=overview](overview.png){width=70%}
 
 #### Preprocessing of raw RNA-seq and ChIP-seq reads
 
@@ -219,13 +219,7 @@ If you use DASiRe, please also cite the following software, which is integrated 
 
 - [Majiq](https://majiq.biociphers.org/): Vaquero-Garcia J, Barrera A, Gazzara MR, González-Vallinas J, Lahens NF, Hogenesch JB, Lynch KW, Barash Y. A new view of transcriptome complexity and regulation through the lens of local splicing variations. Elife. 2016 Feb 1;5:e11752.
 
-# Contact
 
-- Marisol Salgado Albarrán (marisol.salgado@tum.de)
-- Amit Fenn (amit.fenn@tum.de)
-- Chit Tong Lio (chit-tong.lio@wzw.tum.de)
-
-**DASiRe was developed by the [Computational Systems Biology Group](https://www.cosy.bio/) headed by Prof. Dr. Jan Baumbach in Hamburg University.**
 
 <center>![](cosybiologonew.webp)<center>
 

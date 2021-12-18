@@ -48,12 +48,18 @@ ui <- dashboardPage(
             menuItem("Start", 
                      tabName="start", 
                      icon=icon("cat")),
+            menuItem("Documentation",
+                     tabName="docs",
+                     icon=icon("book")),
             menuItem("Upload data",
                      tabName = "import",
                      icon=icon('spinner')
             ),
             uiOutput("rnaseq_page"),
-            uiOutput("chipseq_page")
+            uiOutput("chipseq_page"),
+            menuItem("About",
+                     tabName="about_tab",
+                     icon=icon("fish"))
         )
     ),
     dashboardBody(
@@ -61,13 +67,28 @@ ui <- dashboardPage(
             theme = "blue_gradient"
         ),
         tabItems(
+            tabItem(tabName="about_tab",
+                    h4("Download example data here: "),
+                    downloadButton("download_raw_data", "Download data"),
+                    uiOutput("about_page")),
+                    
+            tabItem(tabName = "docs",
+                    withSpinner(htmlOutput("doc_page"), type=4),
+                    shiny::tags$head(shiny::tags$style(HTML("
+                                
+                               body {
+                                  width: 100% !important;
+                                  max-width: 100% !important;
+                               }
+
+                               ")))),
             tabItem(
                 tabName = "start",
                 fluidRow(
                     div(
                         id="start_panel",
                         column(12,
-                               h2("Welcome!")
+                               withSpinner(htmlOutput("landing_page"), type=4)
                         )
                     )
                 )
@@ -190,6 +211,25 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
     ##render UI    
+    output$about_page <- renderUI({
+        includeHTML("about_page.html")
+    })
+
+    output$landing_page <- renderUI({
+        includeHTML("landing_page.html")
+    })
+    
+    output$doc_page <- renderUI({
+        #HTML(markdown::markdownToHTML(knit("documentation/tutorial.Rmd", quiet = TRUE), fragment.only=TRUE))
+        includeHTML("documentation/tutorial.html")
+    })
+
+    output$download_raw_data <- downloadHandler(filename=function(){"example_data.zip"},
+                                            content = function(file){
+                                                file.copy("examples/example_data.zip", file)
+                                            })
+    
+
     output$rnaseq_page <- renderMenu({
         #show menu only if rnaseq data uploaded
         if(input$renderimport_rna == 0) return()
@@ -669,16 +709,17 @@ server <- function(input, output, session) {
     import_data_modal <- function(failed=F){
         if (failed==F){
             if (input$useexamples == TRUE){
-                modalDialog(
-                    h3("Confirm using examples dataset."),
-                    p("If you are importing your own data, please click 'cancel' and uncheck 'Use example data'."),
-                    selectInput("rnaseq_metacol", "Example sample column:", selected = "sampleID", choices=c("sampleID")),
-                    selectInput("rnaseq_genecol", "Example gene column:", selected = "ensembl_gene_id_version", choices=c("ensembl_gene_id_version")),
-                    footer = tagList(
-                        modalButton("Cancel"),
-                        actionButton("ok_import_rna", "OK")
-                    )
-                )
+                # modalDialog(
+                #     h3("Confirm using examples dataset."),
+                #     p("If you are importing your own data, please click 'cancel' and uncheck 'Use example data'."),
+                #     selectInput("rnaseq_metacol", "Example sample column:", selected = "sampleID", choices=c("sampleID")),
+                #     selectInput("rnaseq_genecol", "Example gene column:", selected = "ensembl_gene_id_version", choices=c("ensembl_gene_id_version")),
+                #     footer = tagList(
+                #         modalButton("Cancel"),
+                #         actionButton("ok_import_rna", "OK")
+                #     )
+                # )
+                
             } else {
                 modalDialog(
                     h4("Select gene column for RNA-seq table: (Now you can ignore this)"),
@@ -701,6 +742,11 @@ server <- function(input, output, session) {
     observeEvent(input$renderimport_rna, {
         showModal(import_data_modal())
     })
+    
+    observeEvent(input$ok_import_rna,{
+        removeModal()
+    })
+    
     
     deseqlevel <- function(failed=F){
         if (is.null(input$rna_meta_var1)){
@@ -757,22 +803,36 @@ server <- function(input, output, session) {
     })
     
     rnaseq_df_clean <- reactive({
+        if (input$useexamples==TRUE){
+            genecol <- "ensembl_gene_id_version"
+        } else {
+            genecol <- input$rnaseq_genecol
+        }
         seqdf <- rnaseq_df()
-        row.names(seqdf) <- seqdf[,input$rnaseq_genecol]
-        return(seqdf %>% dplyr::select(-input$rnaseq_genecol))
+        row.names(seqdf) <- seqdf[,genecol]
+        return(seqdf %>% dplyr::select(-genecol))
     })
     
     rnaseq_meta_clean <- reactive({
         metadf <- rnameta_df()
-        row.names(metadf) <- metadf[,input$rnaseq_metacol]
+        if (input$useexamples==TRUE){
+            metacol <- "sampleID"
+        } else {
+            metacol <- input$rnaseq_metacol
+        }
+        row.names(metadf) <- metadf[, metacol]
         return(metadf)
     })
     
     ## filter meta data 
     filtered_meta <- reactive({
         if (input$load_deseq2 == 0){return()}
+        if (input$useexamples==TRUE){
+            samplename <- "sampleID"
+        } else {
+            samplename <- input$rnaseq_metacol
+        }
         metadf <- rnaseq_meta_clean()
-        samplename <- input$rnaseq_metacol
         sub <- metadf %>% dplyr::select(samplename) 
         return(metadf[sub[,1] %in% input$rna_samples,])
         
@@ -812,7 +872,11 @@ server <- function(input, output, session) {
         
         # seqdf <- rnaseq_df_clean()
         # metadf <- filtered_meta()
-        samplenames <- input$rnaseq_metacol
+        if (input$useexamples==TRUE){
+            samplenames <- "sampleID"
+        } else {
+            samplenames <- input$rnaseq_metacol
+        }
         
         # pr <- prcomp(t(seqdf[,input$rna_samples]))
         # pca <- data.frame(pr$x)
@@ -911,10 +975,40 @@ server <- function(input, output, session) {
     })
     
     output$rna_genecount <- renderPlot({
-        rna_genecount_plot()
+        dds<-dds_obj()
+        gene_counts <- plotCounts(dds, 
+                                  gene=input$gene_name, 
+                                  intgroup=c(input$rna_meta_var1), 
+                                  returnData=TRUE)
+        
+        ggplot(data=gene_counts, aes(x = .data[[input$rna_meta_var1]], y = count, col=.data[[input$rna_meta_var1]])) +
+            geom_point() +
+            scale_color_brewer(palette = "Set1",)+
+            theme_classic(base_size = 12)+
+            # ggtitle(label = i,subtitle = element_blank())+
+            theme(#legend.position=c(0.9, 0.9),
+                # aspect.ratio = 1,
+                # axis.text.x = element_text(size = 8),
+                # axis.title.x = element_text(size = 10),
+                # axis.text.y = element_text(size = 8),
+                # axis.title.y = element_text(size = 10),
+                legend.position = "none",
+                axis.ticks = element_blank(),
+                panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank(),
+                panel.background = element_rect(fill = "transparent",colour = NA),
+                plot.background = element_rect(fill = "transparent",colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                legend.box.background = element_rect(fill = "transparent", colour = NA))+
+            scale_y_log10()+
+            labs(y="log10(normalized_counts)",col="Condition")
     })
     
     rna_volcano_plot <- eventReactive(input$load_deseq2, {
+        
+    })
+    
+    output$rna_volcano <- renderPlot({
         dds <- dds_obj()
         req(input$deseq_result)
         
@@ -926,10 +1020,6 @@ server <- function(input, output, session) {
             geom_hline(yintercept=-log10(0.05), color="blue")+ 
             geom_point(color="black",alpha=0.5,stat="identity")+
             xlim(-10,10)
-    })
-    
-    output$rna_volcano <- renderPlot({
-        rna_volcano_plot()
     })
         
     rna_deseq_res_table <- eventReactive(input$load_deseq2, {
@@ -1362,7 +1452,8 @@ server <- function(input, output, session) {
     
     com_spli_venn_plot <- reactive({
         ### from isa
-        genes.iso <- read.delim(file = "examples/pseudocounts/isoform_signifcant_genes.txt")
+        
+        genes.iso <- isoform_sig_genes()
         genes.iso <- unique(genes.iso$gene_id)
         
         ### from dexseq
@@ -1404,12 +1495,9 @@ server <- function(input, output, session) {
         updateSelectizeInput(session, "iso_gene_name", "Select a gene with switches", choices=unique(x$gene_name), server=TRUE)
     })
     
-    observeEvent(input$ok_import_rna,{
-        removeModal()
-    })
-    
+
     observe({
-        if (input$tabs=="deseq2") {
+        if (input$useexamples==TRUE) {
             updateSelectInput(session, "rna_meta_var1", "Select condition column", choices=colnames(rnameta_df()), selected=colnames(rnameta_df())[2])
             updateSelectizeInput(session, "rna_meta_var2", "Select a variable column (if any)", choices=colnames(rnameta_df()))
             updateCheckboxGroupInput(session, "rna_samples", "Select samples for analysis", choices=colnames(rnaseq_df())[!grepl("gene", colnames(rnaseq_df()))], selected=colnames(rnaseq_df()))
