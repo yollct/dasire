@@ -57,13 +57,15 @@ The analysis steps performed in the web application do not require any additiona
 ## Preprocessing of RNA-seq reads
 
 1. Once docker is installed and running, open a terminal and run the command `git clone https://gitlab.lrz.de/ge39jap/DASiRe.git`. Provide user name and password if required. Wait for the repository to download.
-2. Go to the input directory with the command `cd DASiRe`.
+2. Go to the input directory with the command `cd DASiRe/MOUNT/input`.
 3. Prepare the input directory with the following files:
   - Fastq files of every sample. DASiRe works with paired-end data, provided they are named in the following format `samplename_1.fastq` and `samplename_2.fastq` for forward and reverse reads. 
   - Metadata file, which is a tab-separated text file containing at least two columns named: sample_id and condition. each row corresponds to a sample, where sample_id column must correspond to the name of the fastq files; i.e. for fastq file named `samplename_1.fastq`the metadata should contain a row with `samplename`. The condition column should indicate `control` or `treated`.
 4. Modify `config.sh` file. You can use a text editor, vi or vim.
-5. Run the analysis with the command `docker run -v $(pwd)/MOUNT:/MOUNT dasire-clientside:1`. Wait for the analysis to finish, this will take some time. 
-6. Once the analysis is finished, the output directory will contain a set of files which are required for the webb application.
+5. Go back to the root directory of the git. with `cd ../../` from the **input directory**.
+6. Build the docker environment for DASiRe with the command `docker build ./clientside dasire-clientside:1`
+7. Run the analysis with the command `docker run -v $(pwd)/MOUNT:/MOUNT --user $(id -u):$(id -g) --rm dasire-clientside:1`. Wait for the analysis to finish, this will take some time. 
+8. Once the analysis is finished, the output directory will contain a set of files which are required for the web application.
 
 ## Web-application analysis
 

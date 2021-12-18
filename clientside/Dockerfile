@@ -21,7 +21,7 @@ conda config --add channels conda-forge
 RUN conda install mamba -n base -c conda-forge -y 
 
 # Installing Samtools
-RUN apt update && apt install samtools -y
+RUN apt update && apt install samtools pigz-y
 
 # Installing Payload
 RUN mamba install -c r r-reshape2 -y
