@@ -86,12 +86,24 @@ wait
 echo "DASiRe Step 4 of 4: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
 
 #Majiq
+#Majiq
+# # 		# build sperate config file for each BAM file
+# # 		majiq_basename=$(basename -s .bam $i)
 		outdir_name=$(basename -s .bam $i)
 		mkdir -p /MOUNT/output/MAJIQ/$outdir_name
+# #
+# # 		config=/MOUNT/output/MAJIQ/$outdir_name/config.txt
+# # 		echo "[info]" > $config
+# # 		echo "readlen=75" >> $config
+# # 		echo "bamdirs=/MOUNT/output" >> $config
+# # 		echo "genome=hg38" >> $config
+# # 		echo "strandness=None" >> $config
+# # 		echo "[experiments]" >> $config
+# # 		echo "BAM=$majiq_basename" >> $config
 
 		echo "building MAJIQ reference ..."
 		majiq build $gff -c $majiq-config -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/build
-		
+
 		#get all .majiq files which were created with build
 	        majiqlist=$(ls -1p /MOUNT/output/MAJIQ/$outdir_name/build/*.majiq | xargs echo)
 		majiq psi $majiqlist -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/psi -n "BAM"
