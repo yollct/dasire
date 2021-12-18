@@ -10,6 +10,7 @@ library(RColorBrewer)
 library(pheatmap)
 library(DESeq2)
 library(ggpubr)
+library(knitr)
 library(DT)
 library(reshape2)
 library(dplyr)
@@ -48,12 +49,18 @@ ui <- dashboardPage(
             menuItem("Start", 
                      tabName="start", 
                      icon=icon("cat")),
+            menuItem("Documentation",
+                     tabName="docs",
+                     icon=icon("book")),
             menuItem("Upload data",
                      tabName = "import",
                      icon=icon('spinner')
             ),
             uiOutput("rnaseq_page"),
-            uiOutput("chipseq_page")
+            uiOutput("chipseq_page"),
+            menuItem("About",
+                     tabName="about_tab",
+                     icon=icon("fish"))
         )
     ),
     dashboardBody(
@@ -61,13 +68,19 @@ ui <- dashboardPage(
             theme = "blue_gradient"
         ),
         tabItems(
+            tabItem(tabName="about_tab",
+                    actionButton("download_raw_data", "Download data")),
+                    uiOutput("about_page"),
+                    
+            tabItem(tabName = "docs",
+                    uiOutput("doc_page")),
             tabItem(
                 tabName = "start",
                 fluidRow(
                     div(
                         id="start_panel",
                         column(12,
-                               h2("Welcome!")
+                               uiOutput("landing_page")
                         )
                     )
                 )
@@ -190,6 +203,22 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
     ##render UI    
+    output$about_page <- renderUI({
+        includeHTML("about_page.html")
+    })
+    
+    output$landing_page <- renderUI({
+        includeHTML("landing_page.html")
+    })
+    
+    output$doc_page <- renderUI({
+        includeHTML("documentation/tutorial.html")
+    })
+    
+    observeEvent(input$tab, {
+        updateTabItems(session, "tabs", input$tab)
+    })
+    
     output$rnaseq_page <- renderMenu({
         #show menu only if rnaseq data uploaded
         if(input$renderimport_rna == 0) return()
