@@ -73,14 +73,14 @@ ui <- dashboardPage(
                     uiOutput("about_page")),
                     
             tabItem(tabName = "docs",
-                    uiOutput("doc_page")),
+                    withSpinner(uiOutput("doc_page"), type=4)),
             tabItem(
                 tabName = "start",
                 fluidRow(
                     div(
                         id="start_panel",
                         column(12,
-                               uiOutput("landing_page")
+                               withSpinner(uiOutput("landing_page"), type=4)
                         )
                     )
                 )
