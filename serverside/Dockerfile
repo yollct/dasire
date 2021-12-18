@@ -36,7 +36,7 @@ RUN R -e "tryCatch(BiocManager::install(\"EnsDb.Hsapiens.v86\",ask=FALSE, force=
 RUN R -e "tryCatch(BiocManager::install(\"org.Hs.eg.db\",ask=FALSE, force=TRUE),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(BiocManager::install(\"GenomicFeatures\",ask=FALSE, force=TRUE),  warning = function(w){ stop(\"install command gave a warning\")})"
 RUN R -e "tryCatch(BiocManager::install(\"Gviz\",ask=FALSE, force=TRUE),  warning = function(w){ stop(\"install command gave a warning\")})"
-RUN R -e "tryCatch(install.packages(\"VennDiagram\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
+RUN R -e "tryCatch(install.packages(\"ggvenn\", dependencies = TRUE ),  warning = function(w){ stop(\"install command gave a warning\")})"
 
 RUN wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 && unar htslib-1.10.2.tar.bz2 && cd htslib-1.10.2/ &&  ./configure --prefix=/usr/ && make && make install && cd ..  && rm htslib*.bz2
 

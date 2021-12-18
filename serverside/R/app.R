@@ -33,6 +33,7 @@ library(ChIPpeakAnno)
 library(shinyFiles)
 library(tippy)
 library(VennDiagram)
+library(ggvenn)
 
 source("global.R")
 `%notin%` <- Negate(`%in%`)
@@ -1472,6 +1473,7 @@ server <- function(input, output, session) {
                                       filename = NULL,
                                       col="black",
                                       fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
+        #venn.splicing <- ggvenn(list(DEXseq=genes.exo, IsoformSwitchAnalyzer=genes.iso, Majiq=genes.majiq))
         
         grid.newpage(); grid::grid.draw(venn.splicing)
     })
