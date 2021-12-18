@@ -10,7 +10,6 @@ library(RColorBrewer)
 library(pheatmap)
 library(DESeq2)
 library(ggpubr)
-library(knitr)
 library(DT)
 library(reshape2)
 library(dplyr)
@@ -1462,7 +1461,7 @@ server <- function(input, output, session) {
     
 
     observe({
-        if (input$tabs=="deseq2") {
+        if (input$useexamples==TRUE) {
             updateSelectInput(session, "rna_meta_var1", "Select condition column", choices=colnames(rnameta_df()), selected=colnames(rnameta_df())[2])
             updateSelectizeInput(session, "rna_meta_var2", "Select a variable column (if any)", choices=colnames(rnameta_df()))
             updateCheckboxGroupInput(session, "rna_samples", "Select samples for analysis", choices=colnames(rnaseq_df())[!grepl("gene", colnames(rnaseq_df()))], selected=colnames(rnaseq_df()))
