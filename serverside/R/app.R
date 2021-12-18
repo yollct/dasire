@@ -1467,13 +1467,13 @@ server <- function(input, output, session) {
         genes.majiq <- voila_res()
         genes.majiq <- unique(genes.majiq$Gene.ID)
         
-        venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
-                                               IsoformSwitchAnalyzer=genes.iso,
-                                               Majiq=genes.majiq),
-                                      filename = NULL,
-                                      col="black",
-                                      fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
-        #venn.splicing <- ggvenn(list(DEXseq=genes.exo, IsoformSwitchAnalyzer=genes.iso, Majiq=genes.majiq))
+        # venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
+        #                                        IsoformSwitchAnalyzer=genes.iso,
+        #                                        Majiq=genes.majiq),
+        #                               filename = NULL,
+        #                               col="black",
+        #                               fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
+        venn.splicing <- ggvenn(list(DEXseq=genes.exo, IsoformSwitchAnalyzer=genes.iso, Majiq=genes.majiq))
         
         grid.newpage(); grid::grid.draw(venn.splicing)
     })
