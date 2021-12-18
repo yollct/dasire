@@ -47,42 +47,50 @@ if ! test -f /MOUNT/index/starindex/genomeParameters.txt
 for i in $(find input/ -name "*fastq" -nowarn  | sed 's/..fastq$//g' | sed 's/^input\///g'| sort | uniq)
 	do fastqcount=$(find input/ -name "${i}?.fastq" | wc -l)
 	echo "Sample: input/${i}*  \| Number of Fastqfiles: $fastqcount"
+	sample_basename=$(echo $i| sed 's/_$//g')
 	# -[ ]  check if fastqcount is 2| 0: check input name | case: greater: single  # currently assuming paired
 
-	echo "DASiRe Step 2 of 4: trimming reads for Sample: $i  & Aligning to the genome with STAR & Kallisto"
-	if ! test -f output/${i}r1_trimmed.fastq ; then trimmomatic PE input/${i}1.fastq input/${i}2.fastq output/${i}r1_trimmed.fastq output/${i}r1_unpaired.fastq output/${i}r2_trimmed.fastq output/${i}r2_unpaired.fastq ILLUMINACLIP:$adapters:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36; fi
+	echo "DASiRe Step 2 of 4: trimming reads for Sample: $sample_basename  & Aligning to the genome with STAR & Kallisto"
+	if ! test -f output/${i}r1_trimmed.fastq
+		then trimmomatic PE input/${i}1.fastq input/${i}2.fastq output/${i}r1_trimmed.fastq output/${i}r1_unpaired.fastq output/${i}r2_trimmed.fastq output/${i}r2_unpaired.fastq ILLUMINACLIP:$adapters:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+	fi
 
-	echo "Transcript quantification with Kallisto for Sample: $i"
-	mkdir -p output/pseudocounts/$(echo $i| sed 's/_//g')
-	echo kallisto quant -i /MOUNT/index/kallisto-index -o output/pseudocounts/$(echo $i| sed 's/_//g') --bias output/${i}r1_trimmed.fastq output/${i}r2_trimmed.fastq
+	echo "Transcript quantification with Kallisto for Sample: $sample_basename"
+	mkdir -p output/pseudocounts/$sample_basename
+	if ! test -f output/pseudocounts/$sample_basename/abundance.tsv 
+		then kallisto quant -i /MOUNT/index/kallisto-index -o output/pseudocounts/$sample_basename --bias output/${i}r1_trimmed.fastq output/${i}r2_trimmed.fastq
+	fi
 
-	echo "Genome Alignment with STAR for Sample: $(echo $i| sed 's/_//g')" ; mkdir -p output/STAR/$(echo $i| sed 's/_//g')
-	echo STAR --genomeDir /MOUNT/index/starindex --readFilesIn output/${i}r1_trimmed.fastq output/${i}r2_trimmed.fastq --outSAMattributes NH HI AS nM NM MD --outSAMtype BAM SortedByCoordinate --outReadsUnmapped Fastxm --outFileNamePrefix output/STAR/$(echo $i| sed 's/_//g')
-
+	echo "Genome Alignment with STAR for Sample: $sample_basename" ; mkdir -p output/STAR/$sample_basename
+	if ! test -f output/STAR/${sample_basename}/Aligned.out.bam
+		then STAR --genomeDir /MOUNT/index/starindex --readFilesIn output/${i}r1_trimmed.fastq output/${i}r2_trimmed.fastq --outSAMattributes NH HI AS nM NM MD --outSAMtype BAM SortedByCoordinate --outReadsUnmapped Fastxm --outFileNamePrefix output/STAR/$sample_basename/
+	fi
 done
 
 # Exp independent analysis
 # ---------------------------------------------------------------------------------------------------------
 mkdir output/exon_counts
 echo "DASiRe Step 3 of 4: Quantifying exons with DEXSeq and AS Events with Majiq"
-# for i in $(find output/ -name "*.bam" -nowarn  )
-# do
-# 	echo "indexing $i"
-# 	samtools index $i $i.bai
-# 	echo "counting exons $i"
-#     python dexseq_count.py -s no -r pos -f bam $exon_custom_annotation $i output/exon_counts/$i.exon_counts.txt
-# done
-# wait
+for i in $(find output/ -name "*.bam" -nowarn  )
+do
+	echo "indexing $i"
+	samtools index $i $i.bai
+	echo "counting exons $i"
+    python dexseq_count.py -s no -r pos -f bam $exon_custom_annotation $i output/exon_counts/$i.exon_counts.txt
+done
+wait
 
 
 # Analysis with Experiment Design.
 # ---------------------------------------------------------------------------------------------------------
 echo "DASiRe Step 4 of 4: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
-#     #Majiq
+
+#Majiq
+#Majiq
 # # 		# build sperate config file for each BAM file
 # # 		majiq_basename=$(basename -s .bam $i)
-# # 		outdir_name=$(basename -s .bam $i)_output
-# # 		mkdir -p /MOUNT/output/MAJIQ/$outdir_name
+		outdir_name=$(basename -s .bam $i)
+		mkdir -p /MOUNT/output/MAJIQ/$outdir_name
 # #
 # # 		config=/MOUNT/output/MAJIQ/$outdir_name/config.txt
 # # 		echo "[info]" > $config
@@ -93,14 +101,16 @@ echo "DASiRe Step 4 of 4: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
 # # 		echo "[experiments]" >> $config
 # # 		echo "BAM=$majiq_basename" >> $config
 
-# # 		echo "building MAJIQ reference ..."
-# # 		majiq build $gff -c $config -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/build
-# # 		
-# # 		#get all .majiq files which were created with build
-# # 	        majiqlist=$(ls -1p /MOUNT/output/MAJIQ/$outdir_name/build/*.majiq | xargs echo)
-# # 		majiq psi $majiqlist -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/psi -n "BAM"
-# # 		# create voila.tsv outputfiles
-# # 		voila tsv /MOUNT/output/MAJIQ/$outdir_name/build/splicegraph.sql /MOUNT/output/MAJIQ/$outdir_name/psi/*.voila -f /MOUNT/output/MAJIQ/$outdir_name/voila.tsv
-#Rscript deseq2_dexseq_isoformswicthanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
+		echo "building MAJIQ reference ..."
+		majiq build $gff -c $majiq-config -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/build
+
+		#get all .majiq files which were created with build
+	        majiqlist=$(ls -1p /MOUNT/output/MAJIQ/$outdir_name/build/*.majiq | xargs echo)
+		majiq psi $majiqlist -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/psi -n "BAM"
+		# create voila.tsv outputfiles
+		voila tsv /MOUNT/output/MAJIQ/$outdir_name/build/splicegraph.sql /MOUNT/output/MAJIQ/$outdir_name/psi/*.voila -f /MOUNT/output/MAJIQ/$outdir_name/voila.tsv
+
+
+Rscript deseq2_dexseq_isoformswicthanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
 
 echo "All finished visit https://exbio.wzw.tum.de/dasire/ for your next steps. Upload files from directory MOUNT/output to the webserver."
