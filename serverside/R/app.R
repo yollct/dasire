@@ -73,14 +73,22 @@ ui <- dashboardPage(
                     uiOutput("about_page")),
                     
             tabItem(tabName = "docs",
-                    withSpinner(uiOutput("doc_page"), type=4)),
+                    withSpinner(htmlOutput("doc_page"), type=4),
+                    shiny::tags$head(shiny::tags$style(HTML("
+                                
+                               body {
+                                  width: 100% !important;
+                                  max-width: 100% !important;
+                               }
+
+                               ")))),
             tabItem(
                 tabName = "start",
                 fluidRow(
                     div(
                         id="start_panel",
                         column(12,
-                               withSpinner(uiOutput("landing_page"), type=4)
+                               withSpinner(htmlOutput("landing_page"), type=4)
                         )
                     )
                 )
@@ -206,15 +214,16 @@ server <- function(input, output, session) {
     output$about_page <- renderUI({
         includeHTML("about_page.html")
     })
-    
+
     output$landing_page <- renderUI({
         includeHTML("landing_page.html")
     })
     
     output$doc_page <- renderUI({
+        #HTML(markdown::markdownToHTML(knit("documentation/tutorial.Rmd", quiet = TRUE), fragment.only=TRUE))
         includeHTML("documentation/tutorial.html")
     })
-    
+
     output$download_raw_data <- downloadHandler(filename=function(){"example_data.zip"},
                                             content = function(file){
                                                 file.copy("examples/example_data.zip", file)
@@ -966,10 +975,40 @@ server <- function(input, output, session) {
     })
     
     output$rna_genecount <- renderPlot({
-        rna_genecount_plot()
+        dds<-dds_obj()
+        gene_counts <- plotCounts(dds, 
+                                  gene=input$gene_name, 
+                                  intgroup=c(input$rna_meta_var1), 
+                                  returnData=TRUE)
+        
+        ggplot(data=gene_counts, aes(x = .data[[input$rna_meta_var1]], y = count, col=.data[[input$rna_meta_var1]])) +
+            geom_point() +
+            scale_color_brewer(palette = "Set1",)+
+            theme_classic(base_size = 12)+
+            # ggtitle(label = i,subtitle = element_blank())+
+            theme(#legend.position=c(0.9, 0.9),
+                # aspect.ratio = 1,
+                # axis.text.x = element_text(size = 8),
+                # axis.title.x = element_text(size = 10),
+                # axis.text.y = element_text(size = 8),
+                # axis.title.y = element_text(size = 10),
+                legend.position = "none",
+                axis.ticks = element_blank(),
+                panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank(),
+                panel.background = element_rect(fill = "transparent",colour = NA),
+                plot.background = element_rect(fill = "transparent",colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                legend.box.background = element_rect(fill = "transparent", colour = NA))+
+            scale_y_log10()+
+            labs(y="log10(normalized_counts)",col="Condition")
     })
     
     rna_volcano_plot <- eventReactive(input$load_deseq2, {
+        
+    })
+    
+    output$rna_volcano <- renderPlot({
         dds <- dds_obj()
         req(input$deseq_result)
         
@@ -981,10 +1020,6 @@ server <- function(input, output, session) {
             geom_hline(yintercept=-log10(0.05), color="blue")+ 
             geom_point(color="black",alpha=0.5,stat="identity")+
             xlim(-10,10)
-    })
-    
-    output$rna_volcano <- renderPlot({
-        rna_volcano_plot()
     })
         
     rna_deseq_res_table <- eventReactive(input$load_deseq2, {
