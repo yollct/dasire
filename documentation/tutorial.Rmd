@@ -41,7 +41,7 @@ Consist on two steps:
 
 # Web interface
 
-![](Screenshot 2021-12-17 at 12.30.39 a.m..png){width=90%}
+![](figure1.png){width=90%}
 
 1. Left menu: Switch between the left menu options to import data, visualize the RNA-seq derived data (Quality Check and Splicing Analysis) and the ChIP-seq data (Quality Check and Peak enrichment).
 2. Results panel: Allows the visualization of the results from each analysis step.
@@ -75,13 +75,13 @@ The analysis steps performed in the web application do not require any additiona
 
 The analysis is divided into several sections. quality control, differential expression, differential exon, isoform switch and splicing events.
 
-![RNA-seq results](Screenshot 2021-12-17 at 1.15.13 a.m..png){width=30%} 
+![RNA-seq results](figure2.png){width=30%} 
 
 ##### Quality Control: Shows the alignment statistics of STAR and Kallisto.
 
-![Alignment statistics of STAR. Left barplot shows the percentaje of reads aligned to the genome for each sample. Rigth panel shows the average input read length and the average mapped read legnth for each sample](Screenshot 2021-12-17 at 12.57.29 a.m..png){width=70%} 
+![Alignment statistics of STAR. Left barplot shows the percentaje of reads aligned to the genome for each sample. Rigth panel shows the average input read length and the average mapped read legnth for each sample](figure3.png){width=70%} 
 
-![Pseudoalignment statistics of Kallisto. The barplot shows the percentaje of reads aligned to the transcriptome for each sample.](Screenshot 2021-12-17 at 12.57.36 a.m..png){width=30%} 
+![Pseudoalignment statistics of Kallisto. The barplot shows the percentaje of reads aligned to the transcriptome for each sample.](figure4.png){width=30%} 
 
 ##### Differential expression
 
@@ -89,7 +89,7 @@ The analysis is divided into several sections. quality control, differential exp
 
 \n
 
- ![PCA tab. Left panel shows the PCA plot with samples colored according to the biological condition tested. Right panel depicts the heatmap of distance between samples](Screenshot 2021-12-17 at 12.58.12.png){width=70%}
+ ![PCA tab. Left panel shows the PCA plot with samples colored according to the biological condition tested. Right panel depicts the heatmap of distance between samples](figure5.png){width=70%}
 
 \n
 
@@ -97,7 +97,7 @@ The analysis is divided into several sections. quality control, differential exp
 
 \n
 
-![Normalized counts of the gene selected in the biological conditions tested](Screenshot 2021-12-17 at 12.58.21 a.m..png){width=30%}
+![Normalized counts of the gene selected in the biological conditions tested](figure6.png){width=30%}
  
 \n
  
@@ -105,7 +105,7 @@ The analysis is divided into several sections. quality control, differential exp
  
 \n
  
- ![Volcano plot and full list of DESeq2 results](Screenshot 2021-12-17 at 3.28.21 p.m..png){width=50%}
+ ![Volcano plot and full list of DESeq2 results](figure7.png){width=50%}
  
 \n
  
@@ -113,7 +113,7 @@ The analysis is divided into several sections. quality control, differential exp
 
 \n
 
-![Buble plot of splicing factors expression. Dot color indicates the log2FC and dot size shows the significance, large dots have padj < 0.05](Screenshot 2021-12-17 at 3.30.45 p.m..png){width=50%}
+![Buble plot of splicing factors expression. Dot color indicates the log2FC and dot size shows the significance, large dots have padj < 0.05](figure8.png){width=50%}
 
 ##### Differential exon
 
@@ -121,11 +121,11 @@ This section shows the results of exon analysis with DEXseq. FOr more informatio
 
 - `Summary of DEXseq` tab: Shows the total number of exons tested and the number of exons considered as significantly changed between the conditions. Also, the total number of genes tested is shown, as well as the number of genes containing at least one exon differentially expressed. The user can also visualize any specific gene and the significant exons. 
 
-![Summary of DEXseq results tab. Upper panel described the number of exons evaluated, number of significantly changed exons, and the number of genes with at least one differentially expressed exon. Lower panel shows the visualization of specific genes: y-axis indicates the levels of expression of each exon, x-axis depresents the exons, line colors distinguish between biological conditions tested; the gene model is depicted under the graph, boxes indicate exons and lines introns, pink exons are diffrentially expressed.](Screenshot 2021-12-17 at 3.54.34 p.m..png){width=70%}
+![Summary of DEXseq results tab. Upper panel described the number of exons evaluated, number of significantly changed exons, and the number of genes with at least one differentially expressed exon. Lower panel shows the visualization of specific genes: y-axis indicates the levels of expression of each exon, x-axis depresents the exons, line colors distinguish between biological conditions tested; the gene model is depicted under the graph, boxes indicate exons and lines introns, pink exons are diffrentially expressed.](figure9.png){width=70%}
 
 - `DEXseq table` tab: Show the full results table from DEXseq.
 
-![Table with full results of DEXseq](Screenshot 2021-12-17 at 4.46.40 p.m..png){width=70%}
+![Table with full results of DEXseq](figure10.png){width=70%}
 
 ##### Isoform switch
 
@@ -133,15 +133,15 @@ This section shows the results of isoform switch analysis with IsoformSwitchAnal
 
 - `Genome-wide splicing analysis` tab: Describes and compares the splicing changes detected in the isoform switches.
 
-![Genome-wide splicing analysis. Upper plot depicts the number of significant isoforms that involve the splicing event (A3, A5, ATSS, ATTS, ES, IR, MEE, MES), the comparison is made between the isoforms involved in a switch (the one with the most and least usage). Lower plot depicts the usage fraction (y-axis) between the isoforms involved in a switch (IF1 and IF2) with and without an specific splicing event. ATSS, alternative transcription start site;ATTS, alternative transcription termination site; ES, exon skipping; IR, intron retention; MES, multiple exon skipping; MEE, mutually exclusive exons](Screenshot 2021-12-17 at 4.49.25 p.m..png){width=70%}
+![Genome-wide splicing analysis. Upper plot depicts the number of significant isoforms that involve the splicing event (A3, A5, ATSS, ATTS, ES, IR, MEE, MES), the comparison is made between the isoforms involved in a switch (the one with the most and least usage). Lower plot depicts the usage fraction (y-axis) between the isoforms involved in a switch (IF1 and IF2) with and without an specific splicing event. ATSS, alternative transcription start site;ATTS, alternative transcription termination site; ES, exon skipping; IR, intron retention; MES, multiple exon skipping; MEE, mutually exclusive exons](figure11.png){width=70%}
 
 - `Gene switch plot` tab: Illustrates the annotated isoforms for a specific gene, and highlights the isoforms involved in a switch. The user can select a gene of interest.
 
-![Gene switch plot of GPX4. Upper panel shows the annotated isoforms for this gene. Gene expression panel shows the expression level of GPX4 summarized at gene level, illustrating that a gene can be not significant when evaluated at the gene expression level, while still depict changes in isoform expression, as representd in the Isoform expression and Isoform Usage panels ](Screenshot 2021-12-17 at 4.49.58 p.m..png){width=70%}
+![Gene switch plot of GPX4. Upper panel shows the annotated isoforms for this gene. Gene expression panel shows the expression level of GPX4 summarized at gene level, illustrating that a gene can be not significant when evaluated at the gene expression level, while still depict changes in isoform expression, as representd in the Isoform expression and Isoform Usage panels ](figure12.png){width=70%}
 
 - `Gene switch plot` tab: shows the full results of IsoformSwitchAnalyzer.
 
-![ ](Screenshot 2021-12-17 at 4.50.10 p.m..png){width=70%}
+![ ](figure13.png){width=70%}
 
 ##### Splicing event
 
@@ -151,11 +151,11 @@ This section shows the results of splicing event analysis with Majiq. For more i
 
 - `Number of events` tab: Shows a summary of all the splicing events detected. 
 
-![Summary of Majiq results. Left panel depicts the number of genes with at least one type of splicing event detected. Right panel depicts the number of genes involved in each possible combination of event present in a complex splicing event.](Screenshot 2021-12-17 at 1.08.00 a.m..png){width=70%}
+![Summary of Majiq results. Left panel depicts the number of genes with at least one type of splicing event detected. Right panel depicts the number of genes involved in each possible combination of event present in a complex splicing event.](figure14.png){width=70%}
 
 - `Event table` tab: Full results of Majiq.
 
-![Majiq results](Screenshot 2021-12-17 at 1.08.54 a.m..png)
+![Majiq results](figure15.png)
 
 #### ChIp-seq analysis
 
@@ -167,22 +167,22 @@ This section allows the user to explore the ChIP-seq data. DASiRe incorporates E
 
 - `ENCODE table`: Allows the selection of the ENCODE datasets that will be used as reference. The example data used in this tutorial is performed in K562 cell line and analyzed with the human annotation GRCh38. The table lists the proteins available for comparison.
 
-![ENCODE ChIP-seq reference datasets of known splicing factors](Screenshot 2021-12-17 at 7.05.58 p.m..png){width=70%}
+![ENCODE ChIP-seq reference datasets of known splicing factors](figure16.png){width=70%}
 
 - `Peaks visualization`tab: Shows the peak distribution in the genome for each reference ChIP-seq dataset and also the user data. In this example, the user ChIP-seq protein is YBX1.
 
-![ChIP-seq peak distribution in the genome of the protein of interest (YBX1) and the reference ENCODE proteins](Screenshot 2021-12-17 at 1.10.47 a.m..png){width=70%}
+![ChIP-seq peak distribution in the genome of the protein of interest (YBX1) and the reference ENCODE proteins](figure17.png){width=70%}
 
 - `Gene track`tab: Allows the user to visualize any gene of interest and whether the protein of interest shows occupancy. This is useful to corroborate the presence of the protein in previously validated regions.
 
-![ChIP-seq track visualization in a gene of interest. Upper track in the user dataset, lower track is the human annotation depicting the BTNL10 gene](Screenshot 2021-12-17 at 1.10.54 a.m..png){width=70%}
+![ChIP-seq track visualization in a gene of interest. Upper track in the user dataset, lower track is the human annotation depicting the BTNL10 gene](figure18.png){width=70%}
 
 ##### Peak enrichment
 
 The main purpose of this section is to evaluate the association between the spliced genes and the presence of a protein 
 in a specific RNA-seq dataset. The presence of a protein is taken from the ChiP-seq data that the user gives as input. 
 
-For every splicing type detected in the RNA-seq and the peaks of every ChIP-seq dataset available,the enrichment is performed with Fisher's Exact Test using a contingency as the following example.
+For every splicing type detected in the RNA-seq and the peaks of every ChIP-seq dataset available,the enrichment is performed with Fisher s Exact Test using a contingency as the following example.
 
 |   | Spliced | Non-spliced |
 |:---|:-------|:------------|
@@ -193,11 +193,11 @@ The enrichment is performed at gene or promoter level. The gene analysis uses th
 
 - `Gene level peak enrichment`tab: Shows a summary of the enrichment results performed at the gene level. Significant enrichment is considered when pvalue < 0.05. 
 
-![Gene level ChIP-seq peak enrichment for spliced genes detected. Y-axis indicates the genes detected by the tool and showing the specific splicing type used for the enrichment. X-axis shows the ChIP-seq dataset (user and ENCODE references). Colored cell are significant enrichments (pvalue <0.05) and the number depicted in each cell is the estimate (odds ratio).](Screenshot 2021-12-17 at 8.33.55 p.m..png){width=70%}
+![Gene level ChIP-seq peak enrichment for spliced genes detected. Y-axis indicates the genes detected by the tool and showing the specific splicing type used for the enrichment. X-axis shows the ChIP-seq dataset (user and ENCODE references). Colored cell are significant enrichments (pvalue <0.05) and the number depicted in each cell is the estimate (odds ratio).](figure19.png){width=70%}
 
 - `Promoter level peak enrichment`tab: Shows a summary of the enrichment results performed at the promoter level. Significant enrichment is considered when pvalue < 0.05. 
 
-![Promoter level ChIP-seq peak enrichment for spliced genes detected. Y-axis indicates the genes detected by the tool and showing the specific splicing type used for the enrichment. X-axis shows the ChIP-seq dataset (user and ENCODE references). Colored cell are significant enrichments (pvalue <0.05) and the number depicted in each cell is the estimate (odds ratio).](Screenshot 2021-12-17 at 8.34.24 p.m..png){width=70%}
+![Promoter level ChIP-seq peak enrichment for spliced genes detected. Y-axis indicates the genes detected by the tool and showing the specific splicing type used for the enrichment. X-axis shows the ChIP-seq dataset (user and ENCODE references). Colored cell are significant enrichments (pvalue <0.05) and the number depicted in each cell is the estimate (odds ratio).](figure20.png){width=70%}
 
 # References
 
