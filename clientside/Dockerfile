@@ -26,7 +26,7 @@ RUN apt update && apt install samtools pigz-y
 # Installing Payload
 RUN mamba install -c r r-reshape2 -y
 RUN mamba install -c conda-forge r-dplyr r-plyr  r-optparse -y
-RUN mamba install -c bioconda bioconductor-dexseq bioconductor-isoformswitchanalyzer bioconductor-deseq2 trimmomatic bioconductor-rsubread kallisto star -y
+RUN mamba install -c bioconda htseq bioconductor-dexseq bioconductor-isoformswitchanalyzer bioconductor-deseq2 trimmomatic bioconductor-rsubread kallisto star -y
 
 WORKDIR /MOUNT
 
