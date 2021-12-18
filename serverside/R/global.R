@@ -33,3 +33,4 @@ sf_list <- read.delim(file = "examples/splicing_factors_list.txt",header = T,sep
 ENCODE_metadata <- read.delim("examples/encode_bedNarrowPeak_files/metadata.tsv",sep="\t",header = TRUE)
 
 
+
