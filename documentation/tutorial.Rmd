@@ -225,7 +225,7 @@ If you use DASiRe, please also cite the following software, which is integrated 
 
 **DASiRe was developed by the [Computational Systems Biology Group](https://www.cosy.bio/) headed by Prof. Dr. Jan Baumbach in Hamburg University.**
 
-<center>![](cosybio-logo-new.webp)<center>
+<center>![](cosybiologonew.webp)<center>
 
 
 
