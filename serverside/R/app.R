@@ -701,16 +701,17 @@ server <- function(input, output, session) {
     import_data_modal <- function(failed=F){
         if (failed==F){
             if (input$useexamples == TRUE){
-                modalDialog(
-                    h3("Confirm using examples dataset."),
-                    p("If you are importing your own data, please click 'cancel' and uncheck 'Use example data'."),
-                    selectInput("rnaseq_metacol", "Example sample column:", selected = "sampleID", choices=c("sampleID")),
-                    selectInput("rnaseq_genecol", "Example gene column:", selected = "ensembl_gene_id_version", choices=c("ensembl_gene_id_version")),
-                    footer = tagList(
-                        modalButton("Cancel"),
-                        actionButton("ok_import_rna", "OK")
-                    )
-                )
+                # modalDialog(
+                #     h3("Confirm using examples dataset."),
+                #     p("If you are importing your own data, please click 'cancel' and uncheck 'Use example data'."),
+                #     selectInput("rnaseq_metacol", "Example sample column:", selected = "sampleID", choices=c("sampleID")),
+                #     selectInput("rnaseq_genecol", "Example gene column:", selected = "ensembl_gene_id_version", choices=c("ensembl_gene_id_version")),
+                #     footer = tagList(
+                #         modalButton("Cancel"),
+                #         actionButton("ok_import_rna", "OK")
+                #     )
+                # )
+                
             } else {
                 modalDialog(
                     h4("Select gene column for RNA-seq table: (Now you can ignore this)"),
@@ -794,22 +795,36 @@ server <- function(input, output, session) {
     })
     
     rnaseq_df_clean <- reactive({
+        if (input$useexamples==TRUE){
+            genecol <- "ensembl_gene_id_version"
+        } else {
+            genecol <- input$rnaseq_genecol
+        }
         seqdf <- rnaseq_df()
-        row.names(seqdf) <- seqdf[,input$rnaseq_genecol]
-        return(seqdf %>% dplyr::select(-input$rnaseq_genecol))
+        row.names(seqdf) <- seqdf[,genecol]
+        return(seqdf %>% dplyr::select(-genecol))
     })
     
     rnaseq_meta_clean <- reactive({
         metadf <- rnameta_df()
-        row.names(metadf) <- metadf[,input$rnaseq_metacol]
+        if (input$useexamples==TRUE){
+            metacol <- "sampleID"
+        } else {
+            metacol <- input$rnaseq_metacol
+        }
+        row.names(metadf) <- metadf[, metacol]
         return(metadf)
     })
     
     ## filter meta data 
     filtered_meta <- reactive({
         if (input$load_deseq2 == 0){return()}
+        if (input$useexamples==TRUE){
+            samplename <- "sampleID"
+        } else {
+            samplename <- input$rnaseq_metacol
+        }
         metadf <- rnaseq_meta_clean()
-        samplename <- input$rnaseq_metacol
         sub <- metadf %>% dplyr::select(samplename) 
         return(metadf[sub[,1] %in% input$rna_samples,])
         
@@ -849,7 +864,11 @@ server <- function(input, output, session) {
         
         # seqdf <- rnaseq_df_clean()
         # metadf <- filtered_meta()
-        samplenames <- input$rnaseq_metacol
+        if (input$useexamples==TRUE){
+            samplenames <- "sampleID"
+        } else {
+            samplenames <- input$rnaseq_metacol
+        }
         
         # pr <- prcomp(t(seqdf[,input$rna_samples]))
         # pca <- data.frame(pr$x)
