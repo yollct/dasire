@@ -27,7 +27,7 @@ fi
 
 # Building STAR's Index
 if ! test -f /MOUNT/index/starindex/genomeParameters.txt
-	then mkdir -p /MOUNT/index/starindex
+	then mkdir -p /MOUNT/index/starindex || true # to allow mkdir to fail gracefully, we add "|| true"
 		echo "Indexing reference genome with STAR"
 		STAR \
 		--runMode genomeGenerate \
@@ -56,27 +56,27 @@ for i in $(find input/ -name "*fastq" -nowarn  | sed 's/..fastq$//g' | sed 's/^i
 	fi
 
 	echo "Transcript quantification with Kallisto for Sample: $sample_basename"
-	mkdir -p output/pseudocounts/$sample_basename
+	mkdir -p output/pseudocounts/$sample_basename || true # to allow mkdir to fail gracefully, we add "|| true"
 	if ! test -f output/pseudocounts/$sample_basename/abundance.tsv 
 		then kallisto quant -i /MOUNT/index/kallisto-index -o output/pseudocounts/$sample_basename --bias output/${i}r1_trimmed.fastq output/${i}r2_trimmed.fastq
 	fi
 
-	echo "Genome Alignment with STAR for Sample: $sample_basename" ; mkdir -p output/STAR/$sample_basename
-	if ! test -f output/STAR/${sample_basename}/Aligned.out.bam
+	echo "Genome Alignment with STAR for Sample: $sample_basename" ; mkdir -p output/STAR/$sample_basename || true # to allow mkdir to fail gracefully, we add "|| true"
+	if ! test -f output/STAR/${sample_basename}/Aligned.sortedByCoord.out.bam
 		then STAR --genomeDir /MOUNT/index/starindex --readFilesIn output/${i}r1_trimmed.fastq output/${i}r2_trimmed.fastq --outSAMattributes NH HI AS nM NM MD --outSAMtype BAM SortedByCoordinate --outReadsUnmapped Fastxm --outFileNamePrefix output/STAR/$sample_basename/
 	fi
 done
 
 # Exp independent analysis
 # ---------------------------------------------------------------------------------------------------------
-mkdir output/exon_counts
-echo "DASiRe Step 3 of 4: Quantifying exons with DEXSeq and AS Events with Majiq"
-for i in $(find output/ -name "*.bam" -nowarn  )
+mkdir -p output/exon_counts || true # to allow mkdir to fail gracefully, we add "|| true"
+echo "DASiRe Step 3 of 4: Quantifying exons with DEXSeq"
+for i in $(find output/STAR -name "*.bam" -nowarn  )
 do
 	echo "indexing $i"
 	samtools index $i $i.bai
 	echo "counting exons $i"
-    python dexseq_count.py -s no -r pos -f bam $exon_custom_annotation $i output/exon_counts/$i.exon_counts.txt
+    python /opt/conda/lib/R/library/DEXSeq/python_scripts/dexseq_count.py -s no -r pos -f bam $exon_custom_annotation $i output/exon_counts/$i.exon_counts.txt
 done
 wait
 
@@ -85,12 +85,13 @@ wait
 # ---------------------------------------------------------------------------------------------------------
 echo "DASiRe Step 4 of 4: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
 
-#Majiq
+Rscript deseq2_dexseq_isoformswitchanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
+
 #Majiq
 # # 		# build sperate config file for each BAM file
 # # 		majiq_basename=$(basename -s .bam $i)
 		outdir_name=$(basename -s .bam $i)
-		mkdir -p /MOUNT/output/MAJIQ/$outdir_name
+		mkdir -p /MOUNT/output/MAJIQ/$outdir_name|| true
 # #
 # # 		config=/MOUNT/output/MAJIQ/$outdir_name/config.txt
 # # 		echo "[info]" > $config
@@ -109,8 +110,5 @@ echo "DASiRe Step 4 of 4: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
 		majiq psi $majiqlist -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/psi -n "BAM"
 		# create voila.tsv outputfiles
 		voila tsv /MOUNT/output/MAJIQ/$outdir_name/build/splicegraph.sql /MOUNT/output/MAJIQ/$outdir_name/psi/*.voila -f /MOUNT/output/MAJIQ/$outdir_name/voila.tsv
-
-
-Rscript deseq2_dexseq_isoformswicthanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
 
 echo "All finished visit https://exbio.wzw.tum.de/dasire/ for your next steps. Upload files from directory MOUNT/output to the webserver."
