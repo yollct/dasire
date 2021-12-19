@@ -123,7 +123,7 @@ rownames(sample_data) <- sample_data$sample_id
 
 ##create count table by importing the corresponding count files
 gene_counts.list<-list()
-for (sample in sample_data$sample_id)){
+for (sample in sample_data$sample_id){
   gene_counts.list[[sample]]<-read.delim(sample_data$filename[sample],header = TRUE,sep = "\t")
 }
 names(gene_counts.list)<-sample_data$sample_id

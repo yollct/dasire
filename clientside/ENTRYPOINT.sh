@@ -112,30 +112,34 @@ wait
 # ---------------------------------------------------------------------------------------------------------
 
 echo "DASiRe Step 4 of 5: Majiq as events"
-#Majiq
-# # 		# build sperate config file for each BAM file
-# # 		majiq_basename=$(basename -s .bam $i)
-# #			outdir_name=$(basename -s .Aligned.sortedByCoord.out.bam $i)
-		mkdir -p /MOUNT/output/MAJIQ/|| true
-# #
-# # 		MajiqConfig=/MOUNT/output/MAJIQ/config.txt
-# # 		echo "[info]" > $MajiqConfig
-# # 		echo "readlen=75" >> $MajiqConfig
-# # 		echo "bamdirs=/MOUNT/output" >> $MajiqConfig
-# # 		echo "genome=hg38" >> $MajiqConfig
-# # 		echo "strandness=None" >> $MajiqConfig
-# # 		echo "[experiments]" >> $MajiqConfig
-# # 		echo "BAM=$majiq_basename" >> $MajiqConfig
+if ! test -f output/MAJIQ/voila.tsv
+	then
+	#Majiq
+	# # 		# build sperate config file for each BAM file
+	# # 		majiq_basename=$(basename -s .bam $i)
+	# #			outdir_name=$(basename -s .Aligned.sortedByCoord.out.bam $i)
+			mkdir -p /MOUNT/output/MAJIQ/|| true
+	# #
+	# # 		MajiqConfig=/MOUNT/output/MAJIQ/config.txt
+	# # 		echo "[info]" > $MajiqConfig
+	# # 		echo "readlen=75" >> $MajiqConfig
+	# # 		echo "bamdirs=/MOUNT/output" >> $MajiqConfig
+	# # 		echo "genome=hg38" >> $MajiqConfig
+	# # 		echo "strandness=None" >> $MajiqConfig
+	# # 		echo "[experiments]" >> $MajiqConfig
+	# # 		echo "BAM=$majiq_basename" >> $MajiqConfig
 
-		echo "building MAJIQ reference ..."
-		majiq build $gff -c $MajiqConfig -j 4 -o /MOUNT/output/MAJIQ/build
+			echo "building MAJIQ reference ..."
+			majiq build $gff -c $MajiqConfig -j 4 -o /MOUNT/output/MAJIQ/build
 
-		#get all .majiq files which were created with build
-	        majiqlist=$(ls -1p /MOUNT/output/MAJIQ/build/*.majiq | xargs echo)
-		majiq psi $majiqlist -j 4 -o /MOUNT/output/MAJIQ/psi -n "BAM"
-		# create voila.tsv outputfiles
-		voila tsv /MOUNT/output/MAJIQ/build/splicegraph.sql /MOUNT/output/MAJIQ/psi/*.voila -f /MOUNT/output/MAJIQ/voila.tsv
-
+			#get all .majiq files which were created with build
+				majiqlist=$(ls -1p /MOUNT/output/MAJIQ/build/*.majiq | xargs echo)
+			majiq psi $majiqlist -j 4 -o /MOUNT/output/MAJIQ/psi -n "BAM"
+			# create voila.tsv outputfiles
+			voila tsv /MOUNT/output/MAJIQ/build/splicegraph.sql /MOUNT/output/MAJIQ/psi/*.voila -f /MOUNT/output/MAJIQ/voila_results.tsv 
+			voila tsv /MOUNT/output/MAJIQ/build/splicegraph.sql /MOUNT/output/MAJIQ/psi/*.voila -f /MOUNT/output/MAJIQ/voila_results_all.tsv --show-all
+	else echo "MAJIQ looks like it ran. Please take a look at the output files and remove them, if it's not the run you wanted."
+fi
 echo "DASiRe Step 5 of 5: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R."
-Rscript deseq2_dexseq_isoformswitchanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
+Rscript deseq2_dexseq_isoformswitchanalyzer.Rscript -b $/MOUNT/output/STAR/ -l paired --gtffile $gtf -o /MOUNT/output/ -m $metadata --gfffile $exon_custom_annotation -f $transcripts_fasta
 echo "All finished visit https://exbio.wzw.tum.de/dasire/ for your next steps. Upload files from directory MOUNT/output to the webserver."
