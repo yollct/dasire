@@ -239,7 +239,7 @@ server <- function(input, output, session) {
         
         #ui
         sidebarMenu(
-            menuItem("RNAseq",
+            menuItem("RNA-seq",
                      icon=icon("dna"),
                      tabName = "rnaseq",
                      menuItem("Quality control",
@@ -265,7 +265,7 @@ server <- function(input, output, session) {
         
         #ui
         sidebarMenu(
-            menuItem("CHIP-seq",
+            menuItem("ChIP-seq",
                      tabName="chipseq",
                      icon=icon("dna"),
                      menuItem("Quality control",
