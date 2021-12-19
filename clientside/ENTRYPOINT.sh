@@ -44,6 +44,29 @@ if ! test -f /MOUNT/index/starindex/genomeParameters.txt
 # Alignments
 # ---------------------------------------------------------------------------------------------------------
 
+# find input/ -name "*fastq" -nowarn  | sed 's/..fastq$//g' | sed 's/^input\///g'| sort | uniq | parallel -j 4 "
+# fastqcount=$(find input/ -name "{}?.fastq" | wc -l)
+# 	echo "Sample: input/{}*  \| Number of Fastqfiles: $fastqcount"
+# 	sample_basename=$(echo $i| sed 's/_$//g')
+# 	# -[ ]  check if fastqcount is 2| 0: check input name | case: greater: single  # currently assuming paired
+
+# 	echo "DASiRe Step 2 of 4: trimming reads for Sample: $sample_basename  & Aligning to the genome with STAR & Kallisto"
+# 	if ! test -f output/{}r1_trimmed.fastq
+# 		then trimmomatic PE input/{}1.fastq input/{}2.fastq output/{}r1_trimmed.fastq output/{}r1_unpaired.fastq output/{}r2_trimmed.fastq output/{}r2_unpaired.fastq ILLUMINACLIP:$adapters:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+# 	fi
+
+# 	echo "Transcript quantification with Kallisto for Sample: $sample_basename"
+# 	mkdir -p output/pseudocounts/$sample_basename || true # to allow mkdir to fail gracefully, we add "|| true"
+# 	if ! test -f output/pseudocounts/$sample_basename/abundance.tsv 
+# 		then kallisto quant -i /MOUNT/index/kallisto-index -o output/pseudocounts/$sample_basename --bias output/{}r1_trimmed.fastq output/{}r2_trimmed.fastq
+# 	fi
+
+# 	echo "Genome Alignment with STAR for Sample: $sample_basename" ; mkdir -p output/STAR/$sample_basename || true # to allow mkdir to fail gracefully, we add "|| true"
+# 	if ! test -f output/STAR/${sample_basename}/Aligned.sortedByCoord.out.bam
+# 		then STAR --genomeDir /MOUNT/index/starindex --readFilesIn output/{}r1_trimmed.fastq output/{}r2_trimmed.fastq --outSAMattributes NH HI AS nM NM MD --outSAMtype BAM SortedByCoordinate --outReadsUnmapped Fastxm --outFileNamePrefix output/STAR/$sample_basename/
+# 	fi
+# "
+
 for i in $(find input/ -name "*fastq" -nowarn  | sed 's/..fastq$//g' | sed 's/^input\///g'| sort | uniq)
 	do fastqcount=$(find input/ -name "${i}?.fastq" | wc -l)
 	echo "Sample: input/${i}*  \| Number of Fastqfiles: $fastqcount"
@@ -71,13 +94,16 @@ done
 # ---------------------------------------------------------------------------------------------------------
 mkdir -p output/exon_counts || true # to allow mkdir to fail gracefully, we add "|| true"
 echo "DASiRe Step 3 of 4: Quantifying exons with DEXSeq"
-for i in $(find output/STAR -name "*.bam" -nowarn  )
-do
-	echo "indexing $i"
-	samtools index $i $i.bai
-	echo "counting exons $i"
-    python /opt/conda/lib/R/library/DEXSeq/python_scripts/dexseq_count.py -s no -r pos -f bam $exon_custom_annotation $i output/exon_counts/$i.exon_counts.txt
-done
+
+find output/STAR/ -name "*.bam" -nowarn | xargs dirname {} | grep output/|  sed 's/output\/STAR\///g' | parallel -j 4 \
+	"if ! test -f output/STAR/{}/Aligned.sortedByCoord.out.bam.bai
+	then echo "indexing {}"
+		samtools index output/STAR/{}/Aligned.sortedByCoord.out.bam output/STAR/{}/Aligned.sortedByCoord.out.bam.bai
+	fi
+	if ! test -f output/exon_counts/{}_exon_counts.txt;
+	then echo "counting exons {}"
+    	python /opt/conda/lib/R/library/DEXSeq/python_scripts/dexseq_count.py -s no -r pos -f bam $exon_custom_annotation output/STAR/{}/Aligned.sortedByCoord.out.bam output/exon_counts/{}_exon_counts.txt
+	fi"
 wait
 
 
@@ -93,17 +119,17 @@ Rscript deseq2_dexseq_isoformswitchanalyzer.Rscript -b $bamdir -l paired -gtf $g
 		outdir_name=$(basename -s .bam $i)
 		mkdir -p /MOUNT/output/MAJIQ/$outdir_name|| true
 # #
-# # 		config=/MOUNT/output/MAJIQ/$outdir_name/config.txt
-# # 		echo "[info]" > $config
-# # 		echo "readlen=75" >> $config
-# # 		echo "bamdirs=/MOUNT/output" >> $config
-# # 		echo "genome=hg38" >> $config
-# # 		echo "strandness=None" >> $config
-# # 		echo "[experiments]" >> $config
-# # 		echo "BAM=$majiq_basename" >> $config
+# # 		MajiqConfig=/MOUNT/output/MAJIQ/$outdir_name/config.txt
+# # 		echo "[info]" > $MajiqConfig
+# # 		echo "readlen=75" >> $MajiqConfig
+# # 		echo "bamdirs=/MOUNT/output" >> $MajiqConfig
+# # 		echo "genome=hg38" >> $MajiqConfig
+# # 		echo "strandness=None" >> $MajiqConfig
+# # 		echo "[experiments]" >> $MajiqConfig
+# # 		echo "BAM=$majiq_basename" >> $MajiqConfig
 
 		echo "building MAJIQ reference ..."
-		majiq build $gff -c $majiq-config -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/build
+		majiq build $gff -c $MajiqConfig -j 4 -o /MOUNT/output/MAJIQ/$outdir_name/build
 
 		#get all .majiq files which were created with build
 	        majiqlist=$(ls -1p /MOUNT/output/MAJIQ/$outdir_name/build/*.majiq | xargs echo)

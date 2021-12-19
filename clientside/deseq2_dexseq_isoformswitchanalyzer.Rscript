@@ -6,7 +6,7 @@ option_list = list(
                help="path to bam files folder include the '/' in the end", metavar="character"),
    make_option(c("-l", "--layout"), type="character", default="", 
                help="layout of the experiment 'single' or 'paired'", metavar="character"),
-    make_option(c("-gtf", "--gtffile"), type="character", default="", 
+    make_option(c("-g", "--gtffile"), type="character", default="", 
                help="annotation file in gtf format, example gencode.v36.annotation.gtf", metavar="character"),
     make_option(c("-o", "--outdir"), type="character", default="", 
                help="path to the directory used as output, it must already exist", metavar="character"),
@@ -14,10 +14,10 @@ option_list = list(
                help="tab-separated file with sample information, rows correspond to each sample and 
                columns must include 'sample_id' with the name of the sample it should match the name 
                of fastq files; and 'condition' column with values 'treated' and 'control'", metavar="character"),
-    make_option(c("-gff", "--gfffile"), type="character", default="", 
+    make_option(c("-e", "--gfffile"), type="character", default="", 
                help="exon annotation file in gff format.", metavar="character"),
     make_option(c("-f", "--fasta_tx"), type="character", default="", 
-               help="Fasta sequences of annotated transcripts; i.e.gencode.v36.transcripts.fa", metavar="character"),
+               help="Fasta sequences of annotated transcripts; i.e.gencode.v36.transcripts.fa", metavar="character")
  )
  
 opt_parser = OptionParser(option_list=option_list,usage = "usage: Rscript --vanilla %prog [options]",
@@ -50,9 +50,9 @@ print("###################")
 library(dplyr)
 library(Rsubread)
 
+bamfiles <- list.files(bamdir,pattern = ".bam$")
 file.exists(bamdir,bamfiles) #Verify that the bam files exist
 file.exists(gtffile) #Verify that the gtf files exist
-bamfiles <- list.files(bamdir,pattern = ".bam$")
 dir.create(path = paste0(outdir,"gene_counts/"))
 
 if (layoutbam=="single"){
