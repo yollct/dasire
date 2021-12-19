@@ -136,6 +136,6 @@ echo "DASiRe Step 4 of 5: Majiq as events"
 		# create voila.tsv outputfiles
 		voila tsv /MOUNT/output/MAJIQ/build/splicegraph.sql /MOUNT/output/MAJIQ/psi/*.voila -f /MOUNT/output/MAJIQ/voila.tsv
 
-echo "DASiRe Step 5 of 5: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R"
+echo "DASiRe Step 5 of 5: DESeq, DEXSeq and IsoformSwitchAnalyzeR in R."
 Rscript deseq2_dexseq_isoformswitchanalyzer.Rscript -b $bamdir -l paired -gtf $gtf -o output -m $metadata -gff $exon_custom_annotation -f $transcripts_fasta
 echo "All finished visit https://exbio.wzw.tum.de/dasire/ for your next steps. Upload files from directory MOUNT/output to the webserver."
