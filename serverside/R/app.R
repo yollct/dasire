@@ -33,6 +33,7 @@ library(ChIPpeakAnno)
 library(shinyFiles)
 library(tippy)
 library(VennDiagram)
+library(ggvenn)
 
 source("global.R")
 `%notin%` <- Negate(`%in%`)
@@ -1451,27 +1452,32 @@ server <- function(input, output, session) {
     })
     
     com_spli_venn_plot <- reactive({
+        mart_export <- mart_export_obj()
         ### from isa
         
         genes.iso <- isoform_sig_genes()
         genes.iso <- unique(genes.iso$gene_id)
+        genes.iso.id <- unique(mart_export[mart_export$external_gene_name %in% genes.iso,]$ensembl_gene_id)
         
         ### from dexseq
         dxr1 <- exon_data()
         genes.exo <- as.data.frame(dxr1) %>%
             dplyr::filter(padj <  input$exons_pval_thres )
         genes.exo <- unique(genes.exo$groupID)
+        genes.exo.id <- lapply(genes.exo, function(x){strsplit(x, "[.]")[[1]][1]}) %>% unlist
+        
         
         ### from majiq
         genes.majiq <- voila_res()
         genes.majiq <- unique(genes.majiq$Gene.ID)
-        
-        venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
-                                               IsoformSwitchAnalyzer=genes.iso,
-                                               Majiq=genes.majiq),
-                                      filename = NULL,
-                                      col="black",
-                                      fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
+        genes.majiq.id <- lapply(genes.majiq, function(x){strsplit(x, "[.]")[[1]][1]}) %>% unlist
+        # venn.splicing <- venn.diagram(x = list(DEXseq=genes.exo,
+        #                                        IsoformSwitchAnalyzer=genes.iso,
+        #                                        Majiq=genes.majiq),
+        #                               filename = NULL,
+        #                               col="black",
+        #                               fill=RColorBrewer::brewer.pal(n = 3,name = "Dark2"))
+        venn.splicing <- ggvenn(list(DEXseq=genes.exo.id, IsoformSwitchAnalyzer=genes.iso.id, Majiq=genes.majiq.id))
         
         grid.newpage(); grid::grid.draw(venn.splicing)
     })
