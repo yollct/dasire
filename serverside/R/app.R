@@ -70,7 +70,7 @@ ui <- dashboardPage(
         tabItems(
             tabItem(tabName="about_tab",
                     h4("Download example data here: "),
-                    downloadButton("download_raw_data", "Download data"),
+                    downloadButton("download_raw_data", "Download data", icon=icon("archive")),
                     uiOutput("about_page")),
                     
             tabItem(tabName = "docs",
@@ -110,8 +110,10 @@ ui <- dashboardPage(
                                            h4(HTML("<b>Choose your directory</b>"),span(shiny::icon("info-circle"), id = "rna_dir")),
                                            tippy::tippy_this(elementId = "rna_dir",tooltip = "Please input the preprocessing output directory",placement = "right"),
                                            shinyDirButton("dir", "Input directory", "Upload"),
+                                           br(),
+                                           br(),
                                        div(
-                                           actionButton("renderimport_rna", label="upload", icon=icon("file-import"))
+                                           actionButton("renderimport_rna", label="Upload", icon=icon("file-import"))
                                        )
                                    )),
                                    box(
@@ -123,7 +125,7 @@ ui <- dashboardPage(
                                            h4(HTML("<b>Choose your directory</b>"),span(shiny::icon("info-circle"), id = "xhip_dir")),
                                            tippy::tippy_this(elementId = "chip_dir",tooltip = "Please input the preprocessing output directory",placement = "right"),
                                            fileInput(inputId = "chipseq_bed", label="Choose your ChIPseq bed file"),
-                                           actionButton("renderimport_chip", label="upload", icon=icon("file-import") )
+                                           actionButton("renderimport_chip", label="Upload", icon=icon("file-import") )
                                        )
                                    )
                             ),
@@ -330,26 +332,26 @@ server <- function(input, output, session) {
                          )),
                 ),
                 tabPanel("DESeq2 result",
-                         fluidRow(
+                         column(12, fluidRow(
                              div(
                                  selectInput("deseq_result", label = "Result", choices = c()),
                                  withSpinner(
                                      plotOutput("rna_volcano"), type=4
+                                 ),
+                                 div(
+                                     dropdown(
+                                         selectInput(inputId="deseq2_vc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "deseq2_vc_down", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE
+                                     )
                                  )
                              ),
-                             div(
-                                 style = "position: absolute; left: 1em; bottom: 0.5em;",
-                                 dropdown(
-                                     selectInput(inputId="deseq2_vc_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
-                                     downloadButton(outputId = "deseq2_vc_down", label = "DOWNLOAD"),
-                                     size = "xs",
-                                     icon = icon("download", class = "opt"), 
-                                     up = TRUE
-                                 )
-                             )
+                             
                          ),
                          fluidRow(
-                             div(withSpinner(
+                             withSpinner(
                                  DT::dataTableOutput("rna_deseq_table"), type=4),
                              div(style = "position: absolute; left: 1em; bottom: 0em;",
                                  dropdown(
@@ -358,12 +360,12 @@ server <- function(input, output, session) {
                                      size = "xs",
                                      icon = icon("download", class = "opt"), 
                                      up = FALSE
-                                 ))
+                                 )
                              )
-                         )
+                         ))
                 ),
                 tabPanel("Splicing factors differential expression",
-                         fluidRow(div(withSpinner(plotlyOutput("sf_deseq2"), type=4),
+                         column(8, fluidRow(withSpinner(plotlyOutput("sf_deseq2"), type=4),
                                   div(
                                       style = "position: absolute; left: 1em; bottom: 0.5em;",
                                       dropdown(
@@ -443,31 +445,39 @@ server <- function(input, output, session) {
             tabBox(
                 id="Isoform switch analysis",
                 width=12,
-                height=8,
                 tabPanel("Genome-wide isoform splicing analysis",
-                         fluidRow(div(width=12,
+                         column(12,fluidRow(
                              withSpinner(plotOutput("switch_sum"),type=4),
-                             div(style = "position: absolute; left: 1em; bottom: 0em;",
+                             div(style = "position: absolute; left: 1em;",
                                  dropdown(
                                      selectInput(inputId="iso_switch_sum_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
                                      downloadButton(outputId = "iso_switch_sum_down", label = "DOWNLOAD"),
                                      size = "xs",
                                      icon = icon("download", class = "opt"), 
                                      up = TRUE))
-                         )),
-                        fluidRow(div(width=8, withSpinner(plotOutput("splice_genom"),type=4)))),
+                         ),
+                         br(),
+                         br(),
+                        fluidRow(div(width=8, withSpinner(plotOutput("splice_genom"),type=4)),
+                                 div(style = "position: absolute; left: 1em; bottom: 0em;",
+                                     dropdown(
+                                         selectInput(inputId="iso_genom_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                         downloadButton(outputId = "iso_genom_down", label = "DOWNLOAD"),
+                                         size = "xs",
+                                         icon = icon("download", class = "opt"), 
+                                         up = TRUE))))),
                 # tabPanel("Splicing summary",
                 #          div(width=12,
                 #              withSpinner(plotOutput("switch_enrich"),type=4))),
                 tabPanel("Gene Switch plots",
-                         fluidRow(
+                         column(12,fluidRow(
                             selectInput("iso_gene_name", "Select a gene", choices=c()),
                             actionButton("load_iso", "Load"))
                             ,
                          fluidRow(
-                            withSpinner(
+                            div(withSpinner(
                                  plotOutput("switch_plot"), type=4
-                             ),
+                             )),
                             div(
                                 style = "position: absolute; left: 1em; bottom: 0em;",
                                 dropdown(
@@ -477,12 +487,12 @@ server <- function(input, output, session) {
                                     icon = icon("download", class = "opt"), 
                                     up = TRUE
                                 ))
-                         )
+                         ))
                 ),
                 tabPanel("Genes Switch table",
-                         withSpinner(
+                         column(8,div(withSpinner(
                              DT::dataTableOutput("switch_table"), type=4
-                         ),
+                         )),
                          div(
                              style = "position: absolute; left: 1em; bottom: 0em;",
                              dropdown(
@@ -490,8 +500,8 @@ server <- function(input, output, session) {
                                  downloadButton(outputId = "iso_table_excel", label = "EXCEL"),
                                  size = "xs",
                                  icon = icon("download", class = "opt"), 
-                                 up = FALSE))
-                ))))
+                                 up = FALSE))))
+                )))
     })
     
     output$rna_exon_panels <- renderUI({
@@ -605,7 +615,16 @@ server <- function(input, output, session) {
                         tabBox(title="Comparative analysis of splicing analysis tools",
                                width=12,
                                tabPanel("Overlap of genes",
-                                        withSpinner(plotOutput("com_spli_venn"), type=4)))))
+                                        withSpinner(plotOutput("com_spli_venn"), type=4),
+                                        div(
+                                            style = "position: absolute; left: 1em; bottom: 0em;",
+                                            dropdown(
+                                                selectInput(inputId="com_venn_down_ext", label="Download as...", choices=c("png","svg","pdf","eps","jpeg")),
+                                                downloadButton(outputId = "com_venn_down", label = "DOWNLOAD"),
+                                                size = "xs",
+                                                icon = icon("download", class = "opt"), 
+                                                up = TRUE
+                                            ))))))
     })
     
     output$chip_qc_panels <- renderUI({
@@ -986,7 +1005,7 @@ server <- function(input, output, session) {
             geom_point() +
             scale_color_brewer(palette = "Set1",)+
             theme_classic(base_size = 12)+
-            # ggtitle(label = i,subtitle = element_blank())+
+            ggtitle(label = input$gene_name)+
             theme(#legend.position=c(0.9, 0.9),
                 # aspect.ratio = 1,
                 # axis.text.x = element_text(size = 8),
@@ -1005,9 +1024,6 @@ server <- function(input, output, session) {
             labs(y="log10(normalized_counts)",col="Condition")
     })
     
-    rna_volcano_plot <- eventReactive(input$load_deseq2, {
-        
-    })
     
     output$rna_volcano <- renderPlot({
         dds <- dds_obj()
@@ -1201,7 +1217,7 @@ server <- function(input, output, session) {
    observe({
        sig_exons <- sig_exon_data()
        if (input$tabs=="rna_exon"){
-        updateSelectizeInput(session, "exon_gene_name", label="Select a gene", choices=unique(sig_exons$groupID), server=TRUE)
+        updateSelectizeInput(session, "exon_gene_name", label="Visualize exon counts in a gene", choices=unique(sig_exons$groupID), server=TRUE)
        }
    })
    
@@ -1496,11 +1512,18 @@ server <- function(input, output, session) {
         }
     })
     
-    observeEvent(input$load_iso, {
-        x <- isoform_sig_genes()
-        updateSelectizeInput(session, "iso_gene_name", "Select a gene with switches", choices=unique(x$gene_name), server=TRUE)
-    })
+    # observeEvent(input$load_iso, {
+    #     x <- isoform_sig_genes()
+    #     updateSelectizeInput(session, "iso_gene_name", "Select a gene with switches", choices=unique(x$gene_name), server=TRUE)
+    # })
     
+    observe({
+            if (input$tabs == "rna_iso"){
+                x <- isoform_sig_genes()
+                updateSelectizeInput(session, "iso_gene_name", "Select a gene with switches", choices=unique(x$gene_name), server=TRUE)
+            }
+        })
+
 
     observe({
         if (input$useexamples==TRUE) {
@@ -1524,7 +1547,7 @@ server <- function(input, output, session) {
         if (input$load_deseq2==0){return()}
         dds <- dds_obj()
         updateSelectInput(session, "deseq_result", "Choose a comparison", choices=resultsNames(dds)[2:length(resultsNames(dds))])
-        updateSelectizeInput(session, "gene_name", "Select gene", choices=row.names(counts(dds)), server = TRUE)
+        updateSelectizeInput(session, "gene_name", "Visualize counts of a gene", choices=row.names(counts(dds)), server = TRUE)
     })
 
 
@@ -1763,7 +1786,7 @@ server <- function(input, output, session) {
     observe({
         if (input$tabs=="chip_qc"){
             mart_export <- mart_export_obj()
-            updateSelectizeInput(session, "gene_to_display", label="Select a gene", choices=unique(mart_export$external_gene_name), selected="BTNL10", server=T)
+            updateSelectizeInput(session, "gene_to_display", label="Plot peaks in a gene", choices=unique(mart_export$external_gene_name), selected="BTNL10", server=T)
         }
     })
     
@@ -2099,6 +2122,11 @@ server <- function(input, output, session) {
         filename = function() {paste0("dasire_", "iso_switch_sum", ".", input$iso_switch_sum_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot =iso_switch_sumplot(), device = input$iso_switch_sum_down_ext, width = 10)})
     
+    output$iso_genom_down <- downloadHandler(
+        filename = function() {paste0("dasire_", "iso_genome", ".", input$iso_genom_down_ext,  sep="")},
+        content = function(file) {ggsave(file, plot = splice_genomewide(), device = input$iso_genom_down_ext, width = 10)})
+    
+    
     output$iso_switch_plot_down <- downloadHandler(
         filename = function() {paste0("dasire_", "iso_switch_gene_", input$iso_gene_name, ".", input$iso_switch_plot_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot=switch_plotplot(), device = input$iso_switch_plot_down_ext, width = 10)})
@@ -2130,6 +2158,11 @@ server <- function(input, output, session) {
     output$chip_genetrack_down <- downloadHandler(
         filename = function() {paste0("dasire_", "chip_gene_track", ".", input$chip_genetrack_down_ext,  sep="")},
         content = function(file) {ggsave(file, plot=plot_gene_track(), device = input$chip_genetrack_down_ext, width = 10)})
+    
+    output$com_venn_down <- downloadHandler(
+        filename = function() {paste0("dasire_", "splicing_venn", ".", input$com_venn_down_ext,  sep="")},
+        content = function(file) {ggsave(file, plot=com_spli_venn_plot(), device = input$com_venn_down_ext, width = 10)})
+    
     
     output$deseq2_table_csv <- downloadHandler(
         filename=function() {paste0("dasire_","deseq2_table.csv")},
