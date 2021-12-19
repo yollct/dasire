@@ -50,7 +50,7 @@ print("###################")
 library(dplyr)
 library(Rsubread)
 
-bamfiles <- list.files(bamdir,pattern = ".bam$")
+bamfiles <- list.files(bamdir,pattern = ".bam$",recursive = TRUE)
 file.exists(bamdir,bamfiles) #Verify that the bam files exist
 file.exists(gtffile) #Verify that the gtf files exist
 dir.create(path = paste0(outdir,"gene_counts/"))
