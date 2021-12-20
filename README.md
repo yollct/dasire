@@ -10,6 +10,10 @@ Examples dataset used in the DASiRe web-server : [10.5281/zenodo.5792672](https:
 
 DASiRe is an accessible web-based platform that performs the analysis of raw RNA-seq and ChIP-seq data to study the relationship between DNA-binding proteins and alternative splicing regulation. It provides a fully integrated pipeline that takes raw reads from RNA-seq and performs extensive splicing analysis by incorporating the three current methodological approaches to study alternative splicing: isoform switching, exon and event-level. Once the initial splicing analysis is finished, DASiRe performs ChIP-seq peak enrichment in the spliced genes detected by each one of the three approaches. 
 
+## Visit site
+
+For our hosted web server please visit : [https://exbio.wzw.tum.de/dasire/](https://exbio.wzw.tum.de/dasire/)
+
 ## Serverside
 Start the serverside app by running the following command from the top directory of this git.
 
