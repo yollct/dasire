@@ -1,5 +1,9 @@
 # DASiRe
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5792672.svg)](https://doi.org/10.5281/zenodo.5792672)
+
+Examples dataset used in the DASiRe web-server : [10.5281/zenodo.5792672](https://zenodo.org/record/5792672)
+
 ## What is DASiRe?
 
 **Direct Alternative Splicing Regulator predictor (DASiRe)** is a web application that allows non-expert users to perform different types of splicing analysis from RNA-seq experiments and also incorporates ChIP-seq data of a DNA-binding protein of interest to evaluate whether its presence is associated with the splicing changes detected in the RNA-seq dataset. 
