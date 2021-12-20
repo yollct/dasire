@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5792672.svg)](https://doi.org/10.5281/zenodo.5792672)
 
-Examples dataset used in the DASiRe web-server : [10.5281/zenodo.5792672](10.5281/zenodo.5792672)
+Examples dataset used in the DASiRe web-server : [10.5281/zenodo.5792672](https://zenodo.org/record/5792672)
 
 ## What is DASiRe?
 
