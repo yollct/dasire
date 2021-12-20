@@ -1,9 +1,0 @@
-Sample	STAR_mqc-generalstats-star-uniquely_mapped_percent	Trimmomatic_mqc-generalstats-trimmomatic-dropped_pct	STAR_mqc-generalstats-star-uniquely_mapped	Kallisto_mqc-generalstats-kallisto-pseudoaligned_reads	Kallisto_mqc-generalstats-kallisto-fragment_length	Kallisto_mqc-generalstats-kallisto-percent_aligned
-ENCFF239POR	93.07	0.04	34553231.0			
-ENCFF239POR_1				30555419.0	159.971	82.2987299774
-ENCFF250AJS	93.07	0.04	42333676.0			
-ENCFF250AJS_1				37324342.0	163.837	82.0573662443
-ENCFF301JRH	93.08	0.03	45040812.0			
-ENCFF301JRH_1				40075301.0	162.632	82.8216961165
-ENCFF803NZJ	93.14	0.03	44959546.0			
-ENCFF803NZJ_1				39695892.0	161.33	82.2373373195

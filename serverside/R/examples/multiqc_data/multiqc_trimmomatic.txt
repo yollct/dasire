@@ -1,5 +1,0 @@
-Sample	surviving	surviving_pct	reverse_only_surviving_pct	forward_only_surviving	dropped	dropped_pct	forward_only_surviving_pct	input_read_pairs	reverse_only_surviving
-ENCFF239POR	37127449.0	93.59	0.26	2424854.0	15867.0	0.04	6.11	39669607.0	101437.0
-ENCFF250AJS	45485669.0	92.9	0.26	3331022.0	19794.0	0.04	6.8	48963907.0	127422.0
-ENCFF301JRH	48387443.0	94.93	0.23	2450628.0	17681.0	0.03	4.81	50973676.0	117924.0
-ENCFF803NZJ	48269914.0	95.12	0.22	2352092.0	14000.0	0.03	4.64	50745146.0	109140.0

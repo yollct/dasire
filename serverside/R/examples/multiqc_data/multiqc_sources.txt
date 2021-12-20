@@ -1,9 +1,0 @@
-Module	Section	Sample Name	Source
-Kallisto	all_sections	ENCFF301JRH_1	/nfs/home/users/msalgado/test_data_1_K562/nohup.out
-Kallisto	all_sections	ENCFF239POR_1	/nfs/home/users/msalgado/test_data_1_K562/nohup.out
-Kallisto	all_sections	ENCFF803NZJ_1	/nfs/home/users/msalgado/test_data_1_K562/nohup.out
-Kallisto	all_sections	ENCFF250AJS_1	/nfs/home/users/msalgado/test_data_1_K562/nohup.out
-STAR	SummaryLog	ENCFF250AJS	/nfs/home/users/msalgado/test_data_1_K562/ENCFF250AJS.Log.final.out
-STAR	SummaryLog	ENCFF803NZJ	/nfs/home/users/msalgado/test_data_1_K562/ENCFF803NZJ.Log.final.out
-STAR	SummaryLog	ENCFF301JRH	/nfs/home/users/msalgado/test_data_1_K562/ENCFF301JRH.Log.final.out
-STAR	SummaryLog	ENCFF239POR	/nfs/home/users/msalgado/test_data_1_K562/ENCFF239POR.Log.final.out
